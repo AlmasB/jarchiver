@@ -1,0 +1,112 @@
+package com.almasb.jarchiver;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+
+import com.almasb.common.util.Out;
+import com.almasb.java.io.ByteWriter;
+import com.almasb.java.io.ResourceManager;
+
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.concurrent.Task;
+
+public final class ZipTask extends Task<Void> {
+
+    private final File[] files;
+
+    public ZipTask(File... files) {
+        this.files = files;
+    }
+
+    @Override
+    protected Void call() throws Exception {
+        for (File file : files) {
+            if (file.isDirectory()) {
+                ArrayList<File> files = new ArrayList<File>();
+                loadFileNames(file, files);
+
+                ByteArrayOutputStream fos = new ByteArrayOutputStream();
+                JarOutputStream jos = new JarOutputStream(fos);
+
+                final SimpleIntegerProperty progress = new SimpleIntegerProperty(0);
+
+                files.stream().forEach(aFile -> {
+                    try {
+                        //Out.d("fileName", aFile.getCanonicalPath());
+
+
+                        String name = aFile.getAbsolutePath();
+                        name = name.substring(name.indexOf(file.getName()));
+
+                        JarEntry entry = new JarEntry(name);
+                        jos.putNextEntry(entry);
+                        jos.write(ResourceManager.loadResourceAsByteArray(aFile.getAbsolutePath()));
+                        jos.closeEntry();
+
+                        progress.set(progress.get() + 1);
+                        updateProgress(progress.get(), files.size());
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                        System.exit(0);
+                    }
+                });
+
+                jos.close();
+
+                ByteWriter.write(fos.toByteArray(), file.getAbsolutePath() + ".jar");
+            }
+            else {
+                ByteArrayOutputStream fos = new ByteArrayOutputStream();
+                JarOutputStream jos = new JarOutputStream(fos);
+
+                final SimpleIntegerProperty progress = new SimpleIntegerProperty(0);
+
+                try {
+                    //Out.d("fileName", file.getCanonicalPath());
+
+                    JarEntry entry = new JarEntry(file.getName());
+                    jos.putNextEntry(entry);
+                    jos.write(ResourceManager.loadResourceAsByteArray(file.getAbsolutePath()));
+                    jos.closeEntry();
+
+                    progress.set(progress.get() + 1);
+                    updateProgress(progress.get(), 1);
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                    System.exit(0);
+                }
+
+                jos.close();
+
+                ByteWriter.write(fos.toByteArray(), file.getAbsolutePath() + ".jar");
+            }
+        }
+
+        return null;
+    }
+
+    private void loadFileNames(File folder, ArrayList<File> files) {
+        File[] allFiles = folder.listFiles();
+        if (allFiles == null) {
+            return;
+        }
+
+        for (File aFile : allFiles) {
+            if (aFile.isDirectory()) {
+                loadFileNames(aFile, files);
+            }
+            else {
+                String name = aFile.toString();
+                if (name.contains(File.separator)) {
+                    name = name.substring(name.lastIndexOf(File.separator) + 1);
+                }
+                files.add(aFile);
+            }
+        }
+    }
+}
