@@ -1,13 +1,12 @@
 package com.almasb.jarchiver.task;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
 import com.almasb.common.util.Out;
-import com.almasb.java.io.ByteWriter;
 import com.almasb.java.io.ResourceManager;
 
 import javafx.beans.property.SimpleIntegerProperty;
@@ -23,12 +22,14 @@ public final class ZipCompressTask extends Task<Void> {
 
     @Override
     protected Void call() throws Exception {
+        long start = System.nanoTime();
+
         for (File file : files) {
             if (file.isDirectory()) {
                 ArrayList<File> files = new ArrayList<File>();
                 loadFileNames(file, files);
 
-                ByteArrayOutputStream fos = new ByteArrayOutputStream();
+                FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".jar");
                 JarOutputStream jos = new JarOutputStream(fos);
 
                 final SimpleIntegerProperty progress = new SimpleIntegerProperty(0);
@@ -37,6 +38,8 @@ public final class ZipCompressTask extends Task<Void> {
                     try {
                         String name = aFile.getAbsolutePath();
                         name = name.substring(name.indexOf(file.getName()));
+
+                        updateMessage("Compressing: " + name);
 
                         JarEntry entry = new JarEntry(name);
                         jos.putNextEntry(entry);
@@ -53,11 +56,10 @@ public final class ZipCompressTask extends Task<Void> {
                 });
 
                 jos.close();
-
-                ByteWriter.write(fos.toByteArray(), file.getAbsolutePath() + ".jar");
+                fos.close();
             }
             else {
-                ByteArrayOutputStream fos = new ByteArrayOutputStream();
+                FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".jar");
                 JarOutputStream jos = new JarOutputStream(fos);
 
                 final SimpleIntegerProperty progress = new SimpleIntegerProperty(0);
@@ -77,11 +79,11 @@ public final class ZipCompressTask extends Task<Void> {
                 }
 
                 jos.close();
-
-                ByteWriter.write(fos.toByteArray(), file.getAbsolutePath() + ".jar");
+                fos.close();
             }
         }
 
+        updateMessage(String.format("Compression took: %.3f s", (System.nanoTime() - start) / 1000000000.0));
         //System.gc();
 
         return null;

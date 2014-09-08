@@ -45,21 +45,29 @@ import org.tukaani.xz.XZInputStream;
 import org.tukaani.xz.XZOutputStream;
 
 import com.almasb.common.util.Out;
+import com.almasb.jarchiver.task.XZCompressTask;
 import com.almasb.jarchiver.task.ZipCompressTask;
 import com.almasb.java.io.ByteWriter;
 import com.almasb.java.ui.FXWindow;
 
 public final class App extends FXWindow {
 
-    private Optional<File> fileToCompress = Optional.empty(), fileToDecompress = Optional.empty();
     private CompressionService compressor = new CompressionService();
     private DecompressionService decompressor = new DecompressionService();
 
     private File[] filesToCompress;
+    private File fileToCompress;
 
     private CheckBox check = new CheckBox("Compress");
 
+    // TODO: automatically determine best preset based on file size
     private SimpleIntegerProperty xzPreset = new SimpleIntegerProperty(6);
+
+    private enum Mode {
+        ZIP, XZ
+    }
+
+    private Mode mode = Mode.ZIP;
 
     @Override
     protected void createContent(Pane root) {
@@ -76,7 +84,18 @@ public final class App extends FXWindow {
             .showInformation();
         });
 
-        toolbar.getItems().add(btnAbout);
+        Button btnHelp = new Button("Help");
+        btnHelp.setOnAction(event -> {
+            Dialogs.create()
+            .title("Help")
+            .message("Currently there are 2 compression modes: ZIP / XZ\n"
+                    + "ZIP will produce a .jar file with ZIP compression\n"
+                    + "XZ will produce a .xz file with LZMA2 compression\n"
+                    + "Note: XZ only works with a single file but provides greater compression ratio")
+                    .showInformation();
+        });
+
+        toolbar.getItems().addAll(btnHelp, btnAbout);
 
         // options horizontal bar
         HBox hboxOptions = new HBox(0);
@@ -147,7 +166,7 @@ public final class App extends FXWindow {
             });
             ft.play();
         });
-        //hboxOptions.visibleProperty().bind(check.selectedProperty());
+
         hboxOptions.setPrefWidth(APP_W * 0.75);
         hboxOptions.getChildren().addAll(compressionMode, zipToggle, xzToggle, xzPresetSlider, xzPresetText);
 
@@ -170,23 +189,16 @@ public final class App extends FXWindow {
             if (db.hasFiles()) {
                 success = true;
 
-                filesToCompress = db.getFiles().toArray(new File[0]);
+                if (zipToggle.isSelected()) {
+                    filesToCompress = db.getFiles().toArray(new File[0]);
+                    mode = Mode.ZIP;
+                }
+                else if (xzToggle.isSelected()) {
+                    fileToCompress = db.getFiles().get(0);
+                    mode = Mode.XZ;
+                }
+
                 compressor.restart();
-
-                /*String filePath = null;
-                for (File file : db.getFiles()) {
-                    filePath = file.getAbsolutePath();
-                    Out.println(filePath + " length: " + file.length());
-
-                    if (!check.isSelected()) {
-                        fileToCompress = Optional.of(file);
-                        compressor.restart();
-                    }
-                    else {
-                        fileToDecompress = Optional.of(file);
-                        decompressor.restart();
-                    }
-                }*/
             }
             event.setDropCompleted(success);
             event.consume();
@@ -220,7 +232,7 @@ public final class App extends FXWindow {
         memoryHBox.getChildren().addAll(new Text("Memory Usage: "), memoryUsageBar, memoryText);
 
         Text message = new Text();
-        message.textProperty().bind(toggleGroup.selectedToggleProperty().asString());
+        message.textProperty().bind(compressor.messageProperty());
 
         // VBox to contain all of the above in a vertical layout
         VBox vbox = new VBox(5);
@@ -246,58 +258,15 @@ public final class App extends FXWindow {
     }
 
     private class CompressionService extends Service<Void> {
-        private LZMA2Options options = new LZMA2Options();
-        //options.setPreset(9);
-
         @Override
         protected Task<Void> createTask() {
-            return new ZipCompressTask(filesToCompress);
-            /*return new Task<Void>() {
-                @Override
-                protected Void call() throws Exception {
-                    fileToCompress.ifPresent(file -> {
-                        try (FileInputStream fis = new FileInputStream(file);
-                                FileOutputStream fos = new FileOutputStream(
-                                        file.getAbsolutePath().toString().concat(".ja"));
-                                XZOutputStream out = new XZOutputStream(fos, options)) {
-
-                            byte[] data = ByteWriter.getBytes(fis);
-                            int fileInSize = data.length;
-                            int processedSize = 0;
-
-                            byte[] buffer = new byte[8192];
-                            int readBytes;
-
-                            int iterations = fileInSize / 8192;
-                            int bytesLeft = fileInSize % 8192;
-
-                            for (int i = 0; i < iterations; i++) {
-                                buffer = Arrays.copyOfRange(data, i*8192, i*8192 + 8192);
-                                out.write(buffer);
-                                processedSize += 8192;
-                                updateProgress(processedSize, fileInSize);
-                            }
-
-                            buffer = Arrays.copyOfRange(data, iterations*8192, iterations*8192 + bytesLeft);
-                            out.write(buffer);
-
-                            //                            while ((readBytes = fis.read(buf)) != -1) {
-                            //                                out.write(buf, 0, readBytes);
-                            //                                processedSize += readBytes;
-                            //                                updateProgress(processedSize, fileInSize);
-                            //                            }
-                        }
-                        catch (Exception e) {
-                            Out.i("Compression failed");
-                            Out.e(e);
-                        }
-                    });
-
-                    fileToCompress = Optional.empty();
-
-                    return null;
-                }
-            };*/
+            switch (mode) {
+                case XZ:
+                    return new XZCompressTask(fileToCompress, xzPreset.get());
+                case ZIP:
+                default:
+                    return new ZipCompressTask(filesToCompress);
+            }
         }
     }
 
@@ -307,22 +276,22 @@ public final class App extends FXWindow {
             return new Task<Void>() {
                 @Override
                 protected Void call() throws Exception {
-                    fileToDecompress.ifPresent(file -> {
-                        try (FileInputStream fis = new FileInputStream(file);
-                                FileOutputStream fos = new FileOutputStream(
-                                        file.getAbsolutePath().substring(0, file.getAbsolutePath().length()-3));
-                                XZInputStream in = new XZInputStream(fis)) {
-
-                            byte[] buf = new byte[8192];
-                            int size;
-                            while ((size = in.read(buf)) != -1)
-                                fos.write(buf, 0, size);
-                        }
-                        catch (Exception e) {
-                            Out.i("Failed to decompress");
-                            Out.e(e);
-                        }
-                    });
+                    //                    fileToDecompress.ifPresent(file -> {
+                    //                        try (FileInputStream fis = new FileInputStream(file);
+                    //                                FileOutputStream fos = new FileOutputStream(
+                    //                                        file.getAbsolutePath().substring(0, file.getAbsolutePath().length()-3));
+                    //                                XZInputStream in = new XZInputStream(fis)) {
+                    //
+                    //                            byte[] buf = new byte[8192];
+                    //                            int size;
+                    //                            while ((size = in.read(buf)) != -1)
+                    //                                fos.write(buf, 0, size);
+                    //                        }
+                    //                        catch (Exception e) {
+                    //                            Out.i("Failed to decompress");
+                    //                            Out.e(e);
+                    //                        }
+                    //                    });
 
                     //                    byte[] buf = new byte[8192];
                     //
