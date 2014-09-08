@@ -35,9 +35,6 @@ public final class ZipTask extends Task<Void> {
 
                 files.stream().forEach(aFile -> {
                     try {
-                        //Out.d("fileName", aFile.getCanonicalPath());
-
-
                         String name = aFile.getAbsolutePath();
                         name = name.substring(name.indexOf(file.getName()));
 
@@ -50,8 +47,8 @@ public final class ZipTask extends Task<Void> {
                         updateProgress(progress.get(), files.size());
                     }
                     catch (Exception e) {
-                        e.printStackTrace();
-                        System.exit(0);
+                        Out.i("Failed to compress " + aFile.getAbsolutePath());
+                        Out.e("call()", "Failed to compress file", this, e);
                     }
                 });
 
@@ -66,8 +63,6 @@ public final class ZipTask extends Task<Void> {
                 final SimpleIntegerProperty progress = new SimpleIntegerProperty(0);
 
                 try {
-                    //Out.d("fileName", file.getCanonicalPath());
-
                     JarEntry entry = new JarEntry(file.getName());
                     jos.putNextEntry(entry);
                     jos.write(ResourceManager.loadResourceAsByteArray(file.getAbsolutePath()));
@@ -77,8 +72,8 @@ public final class ZipTask extends Task<Void> {
                     updateProgress(progress.get(), 1);
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
-                    System.exit(0);
+                    Out.i("Failed to compress " + file.getAbsolutePath());
+                    Out.e("call()", "Failed to compress file", this, e);
                 }
 
                 jos.close();

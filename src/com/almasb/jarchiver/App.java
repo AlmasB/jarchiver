@@ -1,8 +1,6 @@
 package com.almasb.jarchiver;
 
-import static com.almasb.jarchiver.Config.APP_H;
-import static com.almasb.jarchiver.Config.APP_TITLE;
-import static com.almasb.jarchiver.Config.APP_W;
+import static com.almasb.jarchiver.Config.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -15,17 +13,24 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ListView;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.ToolBar;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+import org.controlsfx.dialog.Dialogs;
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.XZInputStream;
 import org.tukaani.xz.XZOutputStream;
@@ -47,26 +52,32 @@ public final class App extends FXWindow {
 
     @Override
     protected void createContent(Pane root) {
-        Rectangle rect = new Rectangle(APP_W - 7, APP_H - 30);
-        rect.setArcWidth(50);
-        rect.setArcHeight(50);
-        rect.setFill(null);
-        rect.setStroke(Color.BLACK);
+        // from top to bottom
 
-        Text message = new Text("Drag'n'drop a file for compression/decompression");
+        // toolbar
+        ToolBar toolbar = new ToolBar();
 
-        ProgressIndicator progress = new ProgressIndicator();
-        progress.visibleProperty().bind(compressor.runningProperty());
-        progress.progressProperty().bind(compressor.progressProperty());
+        Button btnAbout = new Button("About");
+        btnAbout.setOnAction(event -> {
+            Dialogs.create()
+            .title("About")
+            .message(APP_TITLE + " " + APP_VERSION)
+            .showInformation();
+        });
 
-        StackPane stack = new StackPane();
-        stack.getChildren().addAll(rect, message, progress);
-        root.getChildren().addAll(stack, check);
-    }
+        toolbar.getItems().add(btnAbout);
 
-    @Override
-    protected void initScene(Scene scene) {
-        scene.setOnDragOver(event -> {
+        // options horizontal bar
+        HBox hboxOptions = new HBox(10);
+
+
+
+
+        // drag and drop area and filenames view
+        ListView<String> list = new ListView<String>();
+        list.setPrefHeight(APP_H / 2);
+
+        list.setOnDragOver(event -> {
             Dragboard db = event.getDragboard();
             if (db.hasFiles()) {
                 event.acceptTransferModes(TransferMode.COPY);
@@ -75,7 +86,7 @@ public final class App extends FXWindow {
                 event.consume();
             }
         });
-        scene.setOnDragDropped(event -> {
+        list.setOnDragDropped(event -> {
             Dragboard db = event.getDragboard();
             boolean success = false;
             if (db.hasFiles()) {
@@ -102,6 +113,77 @@ public final class App extends FXWindow {
             event.setDropCompleted(success);
             event.consume();
         });
+
+
+
+        // progress bar
+        ProgressBar progressBar = new ProgressBar();
+        // TODO: rebind to decompressor, do this somewhere else later
+        progressBar.progressProperty().bind(compressor.progressProperty());
+        progressBar.visibleProperty().bind(compressor.runningProperty());
+
+
+        // VBox to contain all of the above in a vertical layout
+        VBox vbox = new VBox(5);
+        vbox.setPrefWidth(APP_W);
+        vbox.getChildren().addAll(toolbar, hboxOptions, list, progressBar);
+        root.getChildren().add(vbox);
+
+
+        /*        Rectangle rect = new Rectangle(APP_W - 7, APP_H - 30);
+        rect.setArcWidth(50);
+        rect.setArcHeight(50);
+        rect.setFill(null);
+        rect.setStroke(Color.BLACK);
+
+        Text message = new Text("Drag'n'drop a file for compression/decompression");
+
+        ProgressIndicator progress = new ProgressIndicator();
+        progress.visibleProperty().bind(compressor.runningProperty());
+        progress.progressProperty().bind(compressor.progressProperty());
+
+        StackPane stack = new StackPane();
+        stack.getChildren().addAll(rect, message, progress);*/
+    }
+
+    @Override
+    protected void initScene(Scene scene) {
+        //        scene.setOnDragOver(event -> {
+        //            Dragboard db = event.getDragboard();
+        //            if (db.hasFiles()) {
+        //                event.acceptTransferModes(TransferMode.COPY);
+        //            }
+        //            else {
+        //                event.consume();
+        //            }
+        //        });
+        //        scene.setOnDragDropped(event -> {
+        //            Dragboard db = event.getDragboard();
+        //            boolean success = false;
+        //            if (db.hasFiles()) {
+        //                success = true;
+        //
+        //                filesToCompress = db.getFiles().toArray(new File[0]);
+        //                compressor.restart();
+        //
+        //                /*String filePath = null;
+        //                for (File file : db.getFiles()) {
+        //                    filePath = file.getAbsolutePath();
+        //                    Out.println(filePath + " length: " + file.length());
+        //
+        //                    if (!check.isSelected()) {
+        //                        fileToCompress = Optional.of(file);
+        //                        compressor.restart();
+        //                    }
+        //                    else {
+        //                        fileToDecompress = Optional.of(file);
+        //                        decompressor.restart();
+        //                    }
+        //                }*/
+        //            }
+        //            event.setDropCompleted(success);
+        //            event.consume();
+        //        });
     }
 
     @Override
