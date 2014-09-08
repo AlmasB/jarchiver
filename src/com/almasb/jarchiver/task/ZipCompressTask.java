@@ -1,4 +1,4 @@
-package com.almasb.jarchiver;
+package com.almasb.jarchiver.task;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -13,11 +13,11 @@ import com.almasb.java.io.ResourceManager;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.concurrent.Task;
 
-public final class ZipTask extends Task<Void> {
+public final class ZipCompressTask extends Task<Void> {
 
     private final File[] files;
 
-    public ZipTask(File... files) {
+    public ZipCompressTask(File... files) {
         this.files = files;
     }
 
@@ -81,6 +81,8 @@ public final class ZipTask extends Task<Void> {
                 ByteWriter.write(fos.toByteArray(), file.getAbsolutePath() + ".jar");
             }
         }
+
+        //System.gc();
 
         return null;
     }
