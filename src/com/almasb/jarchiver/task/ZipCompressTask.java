@@ -95,16 +95,16 @@ public final class ZipCompressTask extends Task<Void> {
             return;
         }
 
-        for (File aFile : allFiles) {
-            if (aFile.isDirectory()) {
-                loadFileNames(aFile, files);
+        for (File file : allFiles) {
+            if (file.isDirectory()) {
+                loadFileNames(file, files);
             }
             else {
-                String name = aFile.toString();
-                if (name.contains(File.separator)) {
-                    name = name.substring(name.lastIndexOf(File.separator) + 1);
-                }
-                files.add(aFile);
+                //                String name = aFile.toString();
+                //                if (name.contains(File.separator)) {
+                //                    name = name.substring(name.lastIndexOf(File.separator) + 1);
+                //                }
+                files.add(file);
             }
         }
     }
