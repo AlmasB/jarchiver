@@ -53,6 +53,7 @@ import com.almasb.jarchiver.task.XZCompressTask;
 import com.almasb.jarchiver.task.XZDecompressTask;
 import com.almasb.jarchiver.task.ZipCompressTask;
 import com.almasb.jarchiver.task.ZipDecompressTask;
+import com.almasb.jarchiver.util.RuntimeProperties;
 import com.almasb.java.io.ByteWriter;
 import com.almasb.java.ui.FXWindow;
 
@@ -93,10 +94,13 @@ public final class App extends FXWindow {
         btnHelp.setOnAction(event -> {
             Dialogs.create()
             .title("Help")
-            .message("Currently there are 2 compression modes: ZIP / XZ\n"
+            .message("Currently there are 3 compression modes: ZIP / XZ / AAR\n"
                     + "ZIP produces a .jar file with ZIP compression\n"
                     + "XZ produces a .xz file with LZMA2 compression\n"
-                    + "Note: XZ only works with a single file but provides greater compression ratio")
+                    + "AAR produces a .arr file with custom DEFLATE compression\n"
+                    + "Note: XZ only works with a single file but provides greater compression ratio\n"
+                    + "Note: AAR only works with a single file but provides faster compression times\n"
+                    + "Do not use files over 2 GB")
                     .showInformation();
         });
 
@@ -304,7 +308,7 @@ public final class App extends FXWindow {
         //        .showInformation();
 
 
-        Popup pop = new Popup();
+        /*        Popup pop = new Popup();
 
         pop.setX(primaryStage.getX() + APP_W / 2 - 75);
         pop.setY(primaryStage.getY() + APP_H / 2 - 50);
@@ -320,13 +324,10 @@ public final class App extends FXWindow {
         stack.getChildren().addAll(r, msg);
         stack.setOpacity(0);
 
-        //stack.translateXProperty().bind(check.translateXProperty());
-        //stack.translateYProperty().bind(check.translateYProperty());
-
         pop.getContent().addAll(stack);
         pop.show(primaryStage);
 
-        FadeTransition helpFT = new FadeTransition(Duration.seconds(2), stack);
+        FadeTransition helpFT = new FadeTransition(Duration.seconds(1.5), stack);
         helpFT.setToValue(1);
         helpFT.setAutoReverse(true);
         helpFT.setCycleCount(2);
@@ -334,7 +335,7 @@ public final class App extends FXWindow {
             pop.hide();
         });
 
-        FadeTransition ft = new FadeTransition(Duration.seconds(2), stack);
+        FadeTransition ft = new FadeTransition(Duration.seconds(1.5), stack);
         ft.setToValue(1);
         ft.setAutoReverse(true);
         ft.setCycleCount(2);
@@ -344,7 +345,7 @@ public final class App extends FXWindow {
             msg.setText("Click help for more info");
             helpFT.play();
         });
-        ft.play();
+        ft.play();*/
     }
 
     private class CompressionService extends Service<Void> {
@@ -356,9 +357,9 @@ public final class App extends FXWindow {
                 case XZ_DC:
                     return new XZDecompressTask();
                 case AAR_C:
-                    return new AARCompressTask();
+                    return new AARCompressTask(file);
                 case AAR_DC:
-                    return new AARDecompressTask();
+                    return new AARDecompressTask(file);
                 case ZIP_DC:
                     return new ZipDecompressTask(files);
                 case ZIP_C:
