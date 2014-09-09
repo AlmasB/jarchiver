@@ -3,7 +3,6 @@ package com.almasb.jarchiver.task;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.util.Arrays;
 
 import javafx.concurrent.Task;
 
@@ -12,7 +11,6 @@ import org.tukaani.xz.UnsupportedOptionsException;
 import org.tukaani.xz.XZOutputStream;
 
 import com.almasb.common.util.Out;
-import com.almasb.java.io.ByteWriter;
 
 public final class XZCompressTask extends Task<Void> {
 
@@ -40,32 +38,11 @@ public final class XZCompressTask extends Task<Void> {
 
         try (FileInputStream fis = new FileInputStream(file);
                 FileOutputStream fos = new FileOutputStream(
-                        file.getAbsolutePath().toString().concat(".xz"));
+                        file.getAbsolutePath().concat(".xz"));
                 XZOutputStream out = new XZOutputStream(fos, options)) {
 
             byte[] buffer = new byte[8192];
             int readBytes = 0, processedSize = 0, fileSize = (int) file.length();
-
-
-
-            //            byte[] data = ByteWriter.getBytes(fis);
-            //            int fileInSize = data.length;
-            //            int processedSize = 0;
-            //
-            //            byte[] buffer = new byte[8192];
-            //
-            //            int iterations = fileInSize / 8192;
-            //            int bytesLeft = fileInSize % 8192;
-            //
-            //            for (int i = 0; i < iterations; i++) {
-            //                buffer = Arrays.copyOfRange(data, i*8192, i*8192 + 8192);
-            //                out.write(buffer);
-            //                processedSize += 8192;
-            //                updateProgress(processedSize, fileInSize);
-            //            }
-            //
-            //            buffer = Arrays.copyOfRange(data, iterations*8192, iterations*8192 + bytesLeft);
-            //            out.write(buffer);
 
             while ((readBytes = fis.read(buffer)) != -1) {
                 out.write(buffer, 0, readBytes);

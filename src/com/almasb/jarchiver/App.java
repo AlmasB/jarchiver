@@ -36,9 +36,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+import org.controlsfx.control.Notifications;
 import org.controlsfx.dialog.Dialogs;
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.XZInputStream;
@@ -89,8 +91,8 @@ public final class App extends FXWindow {
             Dialogs.create()
             .title("Help")
             .message("Currently there are 2 compression modes: ZIP / XZ\n"
-                    + "ZIP will produce a .jar file with ZIP compression\n"
-                    + "XZ will produce a .xz file with LZMA2 compression\n"
+                    + "ZIP produces a .jar file with ZIP compression\n"
+                    + "XZ produces a .xz file with LZMA2 compression\n"
                     + "Note: XZ only works with a single file but provides greater compression ratio")
                     .showInformation();
         });
@@ -239,6 +241,9 @@ public final class App extends FXWindow {
         vbox.setPrefWidth(APP_W);
         vbox.getChildren().addAll(toolbar, secondBar, list, progressHBox, memoryHBox, message);
         root.getChildren().addAll(vbox);
+
+
+
     }
 
     @Override
@@ -255,6 +260,52 @@ public final class App extends FXWindow {
         primaryStage.setTitle(APP_TITLE);
         primaryStage.setResizable(false);
         primaryStage.show();
+
+        //        Notifications.create().text("Drag and drop files/folders")
+        //        .owner(primaryStage)
+        //        .position(Pos.CENTER)
+        //        .hideAfter(Duration.seconds(2))
+        //        .hideCloseButton()
+        //        .showInformation();
+
+
+        Popup pop = new Popup();
+        pop.setX(primaryStage.getX() + APP_W / 2 - 75);
+        pop.setY(primaryStage.getY() + APP_H / 2 - 50);
+
+        Rectangle r = new Rectangle(150, 100);
+        r.setFill(Color.AQUA);
+        r.setStroke(Color.BLUEVIOLET);
+        r.setArcHeight(30);
+        r.setArcWidth(30);
+
+        StackPane stack = new StackPane();
+        Text msg = new Text("Drag and drop files/folders");
+        stack.getChildren().addAll(r, msg);
+        stack.setOpacity(0);
+
+        pop.getContent().addAll(stack);
+        pop.show(primaryStage);
+
+        FadeTransition helpFT = new FadeTransition(Duration.seconds(2), stack);
+        helpFT.setToValue(1);
+        helpFT.setAutoReverse(true);
+        helpFT.setCycleCount(2);
+        helpFT.setOnFinished(event -> {
+            pop.hide();
+        });
+
+        FadeTransition ft = new FadeTransition(Duration.seconds(2), stack);
+        ft.setToValue(1);
+        ft.setAutoReverse(true);
+        ft.setCycleCount(2);
+        ft.setOnFinished(event -> {
+            pop.setX(primaryStage.getX());
+            pop.setY(primaryStage.getY() + 50);
+            msg.setText("Click help for more info");
+            helpFT.play();
+        });
+        ft.play();
     }
 
     private class CompressionService extends Service<Void> {
