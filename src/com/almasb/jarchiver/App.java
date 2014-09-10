@@ -198,8 +198,20 @@ public final class App extends FXWindow {
         CheckBox check = new CheckBox("Compress");
         check.setSelected(true);
         check.selectedProperty().addListener((obs, old, newValue) -> {
-            if (newValue.booleanValue())
-                toggleGroup.getSelectedToggle().setSelected(true);
+            if (newValue.booleanValue()) {
+                ToggleButton btn = (ToggleButton) toggleGroup.getSelectedToggle();
+                switch (btn.getText()) {
+                    case "ZIP":
+                        mode = Mode.ZIP_C;
+                        break;
+                    case "XZ":
+                        mode = Mode.XZ_C;
+                        break;
+                    case "AAR":
+                        mode = Mode.AAR_C;
+                        break;
+                }
+            }
             else
                 mode = Mode.DC;
 
