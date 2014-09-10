@@ -1,27 +1,21 @@
 package com.almasb.jarchiver;
 
-import static com.almasb.jarchiver.Config.*;
+import static com.almasb.jarchiver.Config.APP_H;
+import static com.almasb.jarchiver.Config.APP_TITLE;
+import static com.almasb.jarchiver.Config.APP_VERSION;
+import static com.almasb.jarchiver.Config.APP_W;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Optional;
 
 import javafx.animation.FadeTransition;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.geometry.VPos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
@@ -30,32 +24,22 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import org.controlsfx.control.Notifications;
 import org.controlsfx.dialog.Dialogs;
-import org.tukaani.xz.LZMA2Options;
-import org.tukaani.xz.XZInputStream;
-import org.tukaani.xz.XZOutputStream;
 
-import com.almasb.common.util.Out;
 import com.almasb.jarchiver.task.AARCompressTask;
 import com.almasb.jarchiver.task.AARDecompressTask;
 import com.almasb.jarchiver.task.XZCompressTask;
 import com.almasb.jarchiver.task.XZDecompressTask;
 import com.almasb.jarchiver.task.ZipCompressTask;
 import com.almasb.jarchiver.task.ZipDecompressTask;
-import com.almasb.jarchiver.util.RuntimeProperties;
-import com.almasb.java.io.ByteWriter;
 import com.almasb.java.ui.FXWindow;
+import com.almasb.java.ui.fx.MemoryUsageBar;
 
 public final class App extends FXWindow {
 
@@ -66,7 +50,6 @@ public final class App extends FXWindow {
 
     private CheckBox check = new CheckBox("Compress");
 
-    // TODO: automatically determine best preset based on file size
     private SimpleIntegerProperty xzPreset = new SimpleIntegerProperty(6);
 
     private enum Mode {
@@ -263,25 +246,16 @@ public final class App extends FXWindow {
         progressHBox.getChildren().addAll(new Text("Progress: "), progressBar, progressText);
 
         // memory usage bar
-        HBox memoryHBox = new HBox(10);
+        MemoryUsageBar memoryBar = new MemoryUsageBar();
 
-        ProgressBar memoryUsageBar = new ProgressBar();
-        memoryUsageBar.setStyle("-fx-accent: rgb(0,255,25)");
-        memoryUsageBar.progressProperty().bind(RuntimeProperties.usedMemoryProperty().divide(RuntimeProperties.totalJVMMemoryProperty()));
-
-        Text memoryText = new Text();
-        memoryText.textProperty().bind(RuntimeProperties.usedMemoryProperty().asString("%.0f")
-                .concat(" / ").concat(RuntimeProperties.totalJVMMemoryProperty().asString("%.0f").concat(" MB")));
-
-        memoryHBox.getChildren().addAll(new Text("Memory Usage: "), memoryUsageBar, memoryText);
-
+        // task messages
         Text message = new Text();
         message.textProperty().bind(compressionService.messageProperty());
 
         // VBox to contain all of the above in a vertical layout
         VBox vbox = new VBox(5);
         vbox.setPrefWidth(APP_W);
-        vbox.getChildren().addAll(toolbar, secondBar, list, progressHBox, memoryHBox, message);
+        vbox.getChildren().addAll(toolbar, secondBar, list, progressHBox, memoryBar, message);
         root.getChildren().addAll(vbox);
     }
 
@@ -355,7 +329,7 @@ public final class App extends FXWindow {
                 case XZ_C:
                     return new XZCompressTask(file, xzPreset.get());
                 case XZ_DC:
-                    return new XZDecompressTask();
+                    return new XZDecompressTask(file);
                 case AAR_C:
                     return new AARCompressTask(file);
                 case AAR_DC:

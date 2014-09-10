@@ -56,7 +56,7 @@ public final class XZCompressTask extends Task<Void> {
         }
 
         updateMessage(String.format("Compression took: %.3f s", (System.nanoTime() - start) / 1000000000.0));
-        //System.gc();
+        System.gc();
 
         return null;
     }

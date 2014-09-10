@@ -7,12 +7,13 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import com.almasb.jarchiver.util.ZIPCompressor;
+import com.almasb.common.util.ZIPCompressor;
 
 public final class AARDecompressTask extends AARTask {
 
     private final File file;
     private int offset = 0;
+    private int progress = 0;
 
     public AARDecompressTask(File file) {
         this.file = file;
@@ -29,7 +30,6 @@ public final class AARDecompressTask extends AARTask {
 
         byte[] data = Files.readAllBytes(file.toPath());
 
-
         ArrayList<AARBlock> blocks = new ArrayList<AARBlock>();
         for (int i = 0; i < NUM_BLOCKS; i++) {
             final int length = ByteBuffer.wrap(Arrays.copyOfRange(data, offset, offset + 4)).getInt();
@@ -43,6 +43,7 @@ public final class AARDecompressTask extends AARTask {
             workerThreads.submit(() -> {
                 block.data = new ZIPCompressor().decompress(Arrays.copyOfRange(data, localOffset, localOffset + length));
                 block.ready.countDown();
+                updateProgress(++progress, NUM_BLOCKS);
             });
 
             offset += length;

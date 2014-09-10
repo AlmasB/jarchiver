@@ -6,16 +6,13 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.CountDownLatch;
 
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-
-import com.almasb.jarchiver.util.ZIPCompressor;
+import com.almasb.common.util.ZIPCompressor;
 
 public final class AARCompressTask extends AARTask {
 
     private final File file;
+    private int progress = 0;
 
     public AARCompressTask(File file) {
         this.file = file;
@@ -43,9 +40,6 @@ public final class AARCompressTask extends AARTask {
 
         ArrayList<AARBlock> blocks = new ArrayList<AARBlock>();
 
-        //final CountDownLatch latch = new CountDownLatch(NUM_BLOCKS);
-        IntegerProperty progress = new SimpleIntegerProperty();
-
         for (int i = 0; i < NUM_BLOCKS; i++) {
             final AARBlock block = new AARBlock(i);
             blocks.add(block);
@@ -54,13 +48,9 @@ public final class AARCompressTask extends AARTask {
                         block.number*bytesPerBlock + (block.number == NUM_BLOCKS - 1 ? bytesLeft : bytesPerBlock)));
 
                 block.ready.countDown();
-                //latch.countDown();
-                progress.set(progress.get() + 1);
-                updateProgress(progress.get(), NUM_BLOCKS);
+                updateProgress(++progress, NUM_BLOCKS);
             });
         }
-
-        //latch.await();
 
         FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".aar");
 
@@ -75,7 +65,7 @@ public final class AARCompressTask extends AARTask {
         fos.close();
 
         updateMessage(String.format("Compression took: %.3f s", (System.nanoTime() - start) / 1000000000.0));
-        //System.gc();
+        System.gc();
 
         return null;
     }
