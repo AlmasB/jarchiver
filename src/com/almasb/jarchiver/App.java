@@ -11,6 +11,7 @@ import javafx.animation.FadeTransition;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -24,9 +25,13 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -45,15 +50,20 @@ public final class App extends FXWindow {
 
     private CompressionService compressionService = new CompressionService();
 
-    private File[] files;
-    private File file;
-
-    private CheckBox check = new CheckBox("Compress");
+    /**
+     * Files to be compressed / decompressed
+     * initial array of size 1 allows to avoid NPE and IOB
+     *
+     * Do check the first element however
+     *
+     * TODO: replace with Optional
+     */
+    private File[] files = new File[1];
 
     private SimpleIntegerProperty xzPreset = new SimpleIntegerProperty(6);
 
     private enum Mode {
-        ZIP_C, ZIP_DC, XZ_C, XZ_DC, AAR_C, AAR_DC
+        ZIP_C, XZ_C, AAR_C, DC
     }
 
     private Mode mode = Mode.ZIP_C;
@@ -61,8 +71,24 @@ public final class App extends FXWindow {
     @Override
     protected void createContent(Pane root) {
         // from top to bottom
+        ToolBar toolBar = createToolbar();
+        HBox optionsBar = createOptionsBar();
+        Parent dragDropArea = createDragDropArea();
+        HBox progressBar = createProgressBar();
+        MemoryUsageBar memoryBar = new MemoryUsageBar();
 
-        // toolbar
+        // task messages
+        Text message = new Text();
+        message.textProperty().bind(compressionService.messageProperty());
+
+        // VBox to contain all of the above in a vertical layout
+        VBox vbox = new VBox(5);
+        vbox.setPrefWidth(APP_W);
+        vbox.getChildren().addAll(toolBar, optionsBar, dragDropArea, progressBar, memoryBar, message);
+        root.getChildren().addAll(vbox);
+    }
+
+    private ToolBar createToolbar() {
         ToolBar toolbar = new ToolBar();
 
         Button btnAbout = new Button("About");
@@ -88,10 +114,10 @@ public final class App extends FXWindow {
         });
 
         toolbar.getItems().addAll(btnHelp, btnAbout);
+        return toolbar;
+    }
 
-        // options horizontal bar
-        HBox hboxOptions = new HBox(0);
-
+    private HBox createOptionsBar() {
         Text compressionMode = new Text("Mode: ");
         compressionMode.setFont(Font.font(compressionMode.getFont().getFamily(), 16));
 
@@ -111,6 +137,7 @@ public final class App extends FXWindow {
                 toggleZIP.setOpacity(1.0);
                 toggleXZ.setOpacity(0.5);
                 toggleAAR.setOpacity(0.5);
+                mode = Mode.ZIP_C;
             }
         });
 
@@ -119,6 +146,7 @@ public final class App extends FXWindow {
                 toggleZIP.setOpacity(0.5);
                 toggleXZ.setOpacity(1.0);
                 toggleAAR.setOpacity(0.5);
+                mode = Mode.XZ_C;
             }
         });
 
@@ -127,6 +155,7 @@ public final class App extends FXWindow {
                 toggleZIP.setOpacity(0.5);
                 toggleXZ.setOpacity(0.5);
                 toggleAAR.setOpacity(1.0);
+                mode = Mode.AAR_C;
             }
         });
 
@@ -138,7 +167,7 @@ public final class App extends FXWindow {
         });
 
         Text xzPresetText = new Text();
-        xzPresetText.setText(6 + " (" + "Medium" + ")");
+        xzPresetText.setText(xzPreset.get() + " (" + "Medium" + ")");
 
         Slider xzPresetSlider = new Slider(0, 9, 6);
         xzPresetSlider.setSnapToTicks(true);
@@ -162,23 +191,32 @@ public final class App extends FXWindow {
             xzPresetText.setText(preset + " (" + compression + ")");
         });
 
+        HBox leftHBox = new HBox(0);
+        leftHBox.setPrefWidth(APP_W * 0.8);
+        leftHBox.getChildren().addAll(compressionMode, toggleZIP, toggleXZ, toggleAAR, xzPresetSlider, xzPresetText);
+
+        CheckBox check = new CheckBox("Compress");
         check.setSelected(true);
         check.selectedProperty().addListener((obs, old, newValue) -> {
-            FadeTransition ft = new FadeTransition(Duration.seconds(1), hboxOptions);
+            if (newValue.booleanValue())
+                toggleGroup.getSelectedToggle().setSelected(true);
+            else
+                mode = Mode.DC;
+
+            FadeTransition ft = new FadeTransition(Duration.seconds(1), leftHBox);
             ft.setToValue(newValue.booleanValue() ? 1 : 0);
             ft.setOnFinished(event -> {
-                hboxOptions.setDisable(!newValue.booleanValue());
+                leftHBox.setDisable(!newValue.booleanValue());
             });
             ft.play();
         });
 
-        hboxOptions.setPrefWidth(APP_W * 0.8);
-        hboxOptions.getChildren().addAll(compressionMode, toggleZIP, toggleXZ, toggleAAR, xzPresetSlider, xzPresetText);
+        HBox optionsHBox = new HBox(0);
+        optionsHBox.getChildren().addAll(leftHBox, check);
+        return optionsHBox;
+    }
 
-        HBox secondBar = new HBox(0);
-        secondBar.getChildren().addAll(hboxOptions, check);
-
-        // drag and drop area and filenames view
+    private Parent createDragDropArea() {
         ListView<String> list = new ListView<String>();
         list.setMaxHeight(APP_H * 0.6);
 
@@ -193,46 +231,17 @@ public final class App extends FXWindow {
             boolean success = false;
             if (db.hasFiles()) {
                 success = true;
-
-                if (check.isSelected()) {
-                    if (toggleZIP.isSelected()) {
-                        files = db.getFiles().toArray(new File[0]);
-                        mode = Mode.ZIP_C;
-                    }
-                    else if (toggleXZ.isSelected()) {
-                        file = db.getFiles().get(0);
-                        mode = Mode.XZ_C;
-                    }
-                    else if (toggleAAR.isSelected()) {
-                        file = db.getFiles().get(0);
-                        mode = Mode.AAR_C;
-                    }
-                }
-                else {
-                    File first = db.getFiles().get(0);
-
-                    // check extension of the first file
-                    if (first.getName().endsWith(".jar")) {
-                        files = db.getFiles().toArray(new File[0]);
-                        mode = Mode.ZIP_DC;
-                    }
-                    else if (first.getName().endsWith(".xz")) {
-                        file = first;
-                        mode = Mode.XZ_DC;
-                    }
-                    else if (first.getName().endsWith(".aar")) {
-                        file = first;
-                        mode = Mode.AAR_DC;
-                    }
-                }
-
+                files = db.getFiles().toArray(new File[0]);
                 compressionService.restart();
             }
             event.setDropCompleted(success);
             event.consume();
         });
 
-        // progress bar
+        return list;
+    }
+
+    private HBox createProgressBar() {
         HBox progressHBox = new HBox(10);
 
         ProgressBar progressBar = new ProgressBar();
@@ -244,19 +253,7 @@ public final class App extends FXWindow {
         progressText.visibleProperty().bind(progressBar.visibleProperty());
 
         progressHBox.getChildren().addAll(new Text("Progress: "), progressBar, progressText);
-
-        // memory usage bar
-        MemoryUsageBar memoryBar = new MemoryUsageBar();
-
-        // task messages
-        Text message = new Text();
-        message.textProperty().bind(compressionService.messageProperty());
-
-        // VBox to contain all of the above in a vertical layout
-        VBox vbox = new VBox(5);
-        vbox.setPrefWidth(APP_W);
-        vbox.getChildren().addAll(toolbar, secondBar, list, progressHBox, memoryBar, message);
-        root.getChildren().addAll(vbox);
+        return progressHBox;
     }
 
     @Override
@@ -274,20 +271,12 @@ public final class App extends FXWindow {
         primaryStage.setResizable(false);
         primaryStage.show();
 
-        //        Notifications.create().text("Drag and drop files/folders")
-        //        .owner(primaryStage)
-        //        .position(Pos.CENTER)
-        //        .hideAfter(Duration.seconds(2))
-        //        .hideCloseButton()
-        //        .showInformation();
-
-
-        /*        Popup pop = new Popup();
+        Popup pop = new Popup();
 
         pop.setX(primaryStage.getX() + APP_W / 2 - 75);
         pop.setY(primaryStage.getY() + APP_H / 2 - 50);
 
-        Rectangle r = new Rectangle(150, 100);
+        Rectangle r = new Rectangle(150, 50);
         r.setFill(Color.AQUA);
         r.setStroke(Color.BLUEVIOLET);
         r.setArcHeight(30);
@@ -314,32 +303,53 @@ public final class App extends FXWindow {
         ft.setAutoReverse(true);
         ft.setCycleCount(2);
         ft.setOnFinished(event -> {
-            pop.setX(primaryStage.getX());
-            pop.setY(primaryStage.getY() + 50);
+            pop.setX(primaryStage.getX() + 90);
+            pop.setY(primaryStage.getY() + 20);
             msg.setText("Click help for more info");
             helpFT.play();
         });
-        ft.play();*/
+        ft.play();
     }
 
     private class CompressionService extends Service<Void> {
+
         @Override
         protected Task<Void> createTask() {
             switch (mode) {
+                case DC:
+                    return findDCTask();
                 case XZ_C:
-                    return new XZCompressTask(file, xzPreset.get());
-                case XZ_DC:
-                    return new XZDecompressTask(file);
+                    return new XZCompressTask(files[0], xzPreset.get());
                 case AAR_C:
-                    return new AARCompressTask(file);
-                case AAR_DC:
-                    return new AARDecompressTask(file);
-                case ZIP_DC:
-                    return new ZipDecompressTask(files);
+                    return new AARCompressTask(files[0]);
                 case ZIP_C:
                 default:
                     return new ZipCompressTask(files);
             }
+        }
+
+        // TODO: either check extensions for ALL files here or do something about it
+        private Task<Void> findDCTask() {
+            File file = files[0];
+            if (file == null || !file.isFile())
+                return new DummyTask();
+
+            if (file.getName().endsWith(".jar"))
+                return new ZipDecompressTask(files);
+            if (file.getName().endsWith(".xz"))
+                return new XZDecompressTask(file);
+            if (file.getName().endsWith(".aar"))
+                return new AARDecompressTask(file);
+
+            return new DummyTask();
+        }
+    }
+
+    private class DummyTask extends Task<Void> {
+        @Override
+        protected Void call() throws Exception {
+            updateMessage("Wrong file extension");
+            return null;
         }
     }
 }
