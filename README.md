@@ -7,7 +7,7 @@ Compile & Run
 =============
 
 Required:
-- JDK 1.8+
+- Oracle JDK 1.8+
 - almasb-lib.jar 1.1.4 (can be found in lib/)
 
 other dependencies will be handled by maven
