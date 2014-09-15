@@ -31,28 +31,22 @@ import com.almasb.common.util.ZIPCompressor;
 
 public final class AARCompressTask extends AARTask {
 
-    private final File file;
-    private int progress = 0;
-
-    public AARCompressTask(File file) {
-        this.file = file;
+    public AARCompressTask(File[] files) {
+        super(files);
     }
 
     @Override
-    protected Void call() throws Exception {
+    protected void taskImpl(File file) throws Exception {
         if (!file.isFile()) {
-            updateMessage("Not a file");
-            return null;
+            updateMessage(file.getAbsolutePath() + " is not a valid file");
+            return;
         }
-
-        updateProgress(0, NUM_BLOCKS);
-        long start = System.nanoTime();
 
         byte[] data = Files.readAllBytes(file.toPath());
 
         if (data.length < NUM_BLOCKS) {
             updateMessage("File too small (<" + NUM_BLOCKS + "B)");
-            return null;
+            return;
         }
 
         int bytesPerBlock = data.length / (NUM_BLOCKS - 1);
@@ -72,21 +66,14 @@ public final class AARCompressTask extends AARTask {
             });
         }
 
-        FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".aar");
+        try (FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".aar")) {
+            for (AARBlock block : blocks) {
+                block.ready.await();
 
-        for (AARBlock block : blocks) {
-            block.ready.await();
-
-            byte[] length = ByteBuffer.allocate(4).putInt(block.data.length).array();
-            fos.write(length);
-            fos.write(block.data);
+                byte[] length = ByteBuffer.allocate(4).putInt(block.data.length).array();
+                fos.write(length);
+                fos.write(block.data);
+            }
         }
-
-        fos.close();
-
-        updateMessage(String.format("Compression took: %.3f s", (System.nanoTime() - start) / 1000000000.0));
-        System.gc();
-
-        return null;
     }
 }
