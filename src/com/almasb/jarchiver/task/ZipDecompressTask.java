@@ -26,8 +26,6 @@ import java.io.FileOutputStream;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
-import com.almasb.common.util.Out;
-
 import javafx.concurrent.Task;
 
 public final class ZipDecompressTask extends Task<Void> {
@@ -78,7 +76,7 @@ public final class ZipDecompressTask extends Task<Void> {
         }
 
         updateMessage(String.format("Decompression took: %.3f s", (System.nanoTime() - start) / 1000000000.0));
-        //System.gc();
+        System.gc();
 
         return null;
     }

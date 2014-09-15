@@ -79,56 +79,8 @@ public final class AARDecompressTask extends AARTask {
         fos.close();
 
         updateMessage(String.format("Decompression took: %.3f s", (System.nanoTime() - start) / 1000000000.0));
-        //System.gc();
+        System.gc();
 
         return null;
     }
-
-    //private static int offset = 0;
-
-    //            FileInputStream fis = new FileInputStream("sdl.aar");
-    //
-    //            byte[] data = ByteWriter.getBytes(fis);
-    //            fis.close();
-    //
-    //
-    //            ArrayList<Block> blocks = new ArrayList<Block>();
-    //
-    //            final CountDownLatch latch = new CountDownLatch(32);
-    //
-    //            for (int i = 0; i < 33; i++) {
-    //                final int length = ByteBuffer.wrap(Arrays.copyOfRange(data, offset, offset + 4)).getInt();
-    //                System.out.println(i + " : " + length);
-    //                offset += 4;
-    //
-    //                final Block block = new Block(i);
-    //                blocks.add(block);
-    //
-    //                final int localOffset = offset;
-    //
-    //                workers.submit(() -> {
-    //                    byte[] dd = Arrays.copyOfRange(data, localOffset, localOffset + length);
-    //
-    //                    System.out.println(block.number + "block : " + dd.length);
-    //
-    //                    block.data = new ZIPCompressor().decompress(dd);
-    //                    latch.countDown();
-    //                });
-    //
-    //                offset += length;
-    //            }
-    //
-    //
-    //            latch.await();
-    //
-    //            workers.shutdownNow();
-    //
-    //
-    //            FileOutputStream fos = new FileOutputStream("sdl.zip");
-    //
-    //            for (Block block : blocks) {
-    //                fos.write(block.data);
-    //            }
-    //
-    //            fos.close();
 }

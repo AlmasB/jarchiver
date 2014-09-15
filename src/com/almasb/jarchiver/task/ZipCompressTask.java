@@ -120,10 +120,6 @@ public final class ZipCompressTask extends Task<Void> {
                 loadFileNames(file, files);
             }
             else {
-                //                String name = aFile.toString();
-                //                if (name.contains(File.separator)) {
-                //                    name = name.substring(name.lastIndexOf(File.separator) + 1);
-                //                }
                 files.add(file);
             }
         }
