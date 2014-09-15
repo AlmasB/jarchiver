@@ -20,6 +20,13 @@
  */
 package com.almasb.jarchiver;
 
+/**
+ * Application config and constants
+ *
+ * @author Almas Baimagambetov (ab607@uni.brighton.ac.uk)
+ * @version 1.0
+ *
+ */
 public final class Config {
 
     public static final int APP_W = 500;

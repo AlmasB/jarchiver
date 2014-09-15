@@ -66,6 +66,13 @@ import com.almasb.jarchiver.task.ZipDecompressTask;
 import com.almasb.java.ui.FXWindow;
 import com.almasb.java.ui.fx.MemoryUsageBar;
 
+/**
+ * Application UI and its interaction with the logic layer
+ *
+ * @author Almas Baimagambetov (ab607@uni.brighton.ac.uk)
+ * @version 1.0
+ *
+ */
 public final class App extends FXWindow {
 
     private CompressionService compressionService = new CompressionService();

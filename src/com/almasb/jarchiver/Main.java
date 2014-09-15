@@ -20,6 +20,13 @@
  */
 package com.almasb.jarchiver;
 
+/**
+ * Main entry point
+ *
+ * @author Almas Baimagambetov (ab607@uni.brighton.ac.uk)
+ * @version 1.0
+ *
+ */
 public final class Main {
     public static void main(String[] args) {
         new App().init();

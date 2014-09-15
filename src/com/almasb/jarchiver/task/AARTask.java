@@ -26,10 +26,26 @@ import java.util.concurrent.Executors;
 
 import javafx.concurrent.Task;
 
+/**
+ * Parent AARTask which holds info about the AAR format
+ *
+ * Also the same shared {@link java.util.concurrent.ExecutorService}
+ * both for compression and decompression
+ *
+ * @author Almas Baimagambetov (ab607@uni.brighton.ac.uk)
+ * @version 1.0
+ *
+ */
 /*package-private*/ abstract class AARTask extends Task<Void> {
 
+    /**
+     * The AAR file consists of this many blocks
+     */
     protected static final int NUM_BLOCKS = 64;
 
+    /**
+     * Shared worker threads
+     */
     protected static ExecutorService workerThreads = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
     /**
@@ -41,10 +57,27 @@ import javafx.concurrent.Task;
      *
      */
     /*package-private*/ static final class AARBlock {
+        /**
+         * Block number in sequence, i.e. 1st, 2nd, etc
+         */
         public final int number;
+
+        /**
+         * The data block holds
+         */
         public byte[] data;
+
+        /**
+         * Whether this block is ready to be written / read
+         */
         public final CountDownLatch ready = new CountDownLatch(1);
 
+        /**
+         * Creates an AAR block with given position
+         *
+         * @param number
+         *              the position in sequence
+         */
         public AARBlock(int number) {
             this.number = number;
         }
