@@ -39,10 +39,21 @@ public final class XZDecompressTask extends JArchiverTask {
                         file.getAbsolutePath().substring(0, file.getAbsolutePath().length()-3));
                 XZInputStream in = new XZInputStream(fis)) {
 
-            byte[] buf = new byte[8192];
-            int size;
-            while ((size = in.read(buf)) != -1)
-                fos.write(buf, 0, size);
+            final int fileSize = (int) file.length();
+            byte[] buffer = new byte[8192];
+            int len;
+
+            while ((len = in.read(buffer)) != -1) {
+                fos.write(buffer, 0, len);
+                // the following isn't entirely correct
+                // fileSize is of a compressed file
+                // whereas len is number of bytes to write for uncompressed
+                // nevertheless this is at least some way of telling the user
+                // that we are doing something, it's just the bar will reach 100%
+                // faster than it should
+                progress += len;
+                updateProgress(progress, fileSize);
+            }
         }
     }
 }

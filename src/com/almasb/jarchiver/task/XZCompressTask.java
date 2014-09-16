@@ -54,12 +54,12 @@ public final class XZCompressTask extends JArchiverTask {
                 XZOutputStream out = new XZOutputStream(fos, options)) {
 
             byte[] buffer = new byte[8192];
-            int readBytes = 0;
+            int len = 0;
             int fileSize = (int) file.length();
 
-            while ((readBytes = fis.read(buffer)) != -1) {
-                out.write(buffer, 0, readBytes);
-                progress += readBytes;
+            while ((len = fis.read(buffer)) != -1) {
+                out.write(buffer, 0, len);
+                progress += len;
                 updateProgress(progress, fileSize);
             }
         }

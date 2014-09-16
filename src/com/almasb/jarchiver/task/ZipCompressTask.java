@@ -21,6 +21,7 @@
 package com.almasb.jarchiver.task;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.jar.JarEntry;
@@ -52,6 +53,8 @@ public final class ZipCompressTask extends JArchiverTask {
 
                     JarEntry entry = new JarEntry(name);
                     jos.putNextEntry(entry);
+                    // assuming files aren't too big otherwise
+                    // use the technique below 'read-write'
                     jos.write(ResourceManager.loadResourceAsByteArray(aFile.getAbsolutePath()));
                     jos.closeEntry();
 
@@ -60,15 +63,24 @@ public final class ZipCompressTask extends JArchiverTask {
             }
         }
         else if (file.isFile()) {
-            try (FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".jar");
+            try (FileInputStream fis = new FileInputStream(file);
+                    FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".jar");
                     JarOutputStream jos = new JarOutputStream(fos)) {
+
+                final int fileSize = (int) file.length();
 
                 JarEntry entry = new JarEntry(file.getName());
                 jos.putNextEntry(entry);
-                jos.write(ResourceManager.loadResourceAsByteArray(file.getAbsolutePath()));
-                jos.closeEntry();
 
-                updateProgress(++progress, 1);
+                byte[] buffer = new byte[8192];
+                int len;
+                while ((len = fis.read(buffer)) != -1) {
+                    jos.write(buffer, 0, len);
+                    progress += len;
+                    updateProgress(progress, fileSize);
+                }
+
+                jos.closeEntry();
             }
         }
     }

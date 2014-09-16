@@ -59,6 +59,7 @@ import javafx.util.Duration;
 
 import org.controlsfx.dialog.Dialogs;
 
+import com.almasb.common.util.Out;
 import com.almasb.jarchiver.task.AARCompressTask;
 import com.almasb.jarchiver.task.AARDecompressTask;
 import com.almasb.jarchiver.task.XZCompressTask;
@@ -269,6 +270,7 @@ public final class App extends FXWindow {
             boolean success = false;
             if (db.hasFiles()) {
                 success = true;
+                files.clear();
                 files.addAll(db.getFiles());
                 compressionService.restart();
             }

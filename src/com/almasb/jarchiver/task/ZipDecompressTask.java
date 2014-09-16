@@ -37,6 +37,8 @@ public final class ZipDecompressTask extends JArchiverTask {
         try (FileInputStream fis = new FileInputStream(file);
                 JarInputStream jis = new JarInputStream(fis)) {
 
+            final int fileSize = (int) file.length();
+
             JarEntry entry = null;
             while ((entry = jis.getNextJarEntry()) != null) {
                 String fileName = entry.getName();
@@ -54,6 +56,8 @@ public final class ZipDecompressTask extends JArchiverTask {
                     int len;
                     while ((len = jis.read(buf)) > 0) {
                         fos.write(buf, 0, len);
+                        progress += len;
+                        updateProgress(progress, fileSize);
                     }
                 }
             }
