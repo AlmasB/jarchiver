@@ -21,11 +21,13 @@
 package com.almasb.jarchiver.task;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import com.almasb.common.util.ZIPCompressor;
 
@@ -36,34 +38,42 @@ public final class AARDecompressTask extends AARTask {
     }
 
     @Override
-    protected void taskImpl(File file) throws Exception {
-        int offset = 0;
-
-        byte[] data = Files.readAllBytes(file.toPath());
-
+    protected void taskImpl(File legacyFile) throws Exception {
+        Path file = legacyFile.toPath();
         ArrayList<AARBlock> blocks = new ArrayList<AARBlock>();
-        for (int i = 0; i < NUM_BLOCKS; i++) {
-            final int length = ByteBuffer.wrap(Arrays.copyOfRange(data, offset, offset + 4)).getInt();
-            offset += 4;
 
-            final AARBlock block = new AARBlock(i);
-            blocks.add(block);
+        try (FileChannel fc = FileChannel.open(file)) {
+            for (int i = 0; i < NUM_BLOCKS; i++) {
+                // create 4byte buffer and read data length
+                ByteBuffer dataLength = ByteBuffer.allocate(4);
+                int len;
+                do {
+                    len = fc.read(dataLength);
+                } while (len != -1 && dataLength.hasRemaining());
 
-            final int localOffset = offset;
+                // create data length buffer and read data
+                final ByteBuffer buffer = ByteBuffer.allocate(dataLength.getInt(0));
+                do {
+                    len = fc.read(buffer);
+                } while (len != -1 && buffer.hasRemaining());
 
-            workerThreads.submit(() -> {
-                block.data = new ZIPCompressor().decompress(Arrays.copyOfRange(data, localOffset, localOffset + length));
-                block.ready.countDown();
-                updateProgress(++progress, NUM_BLOCKS);
-            });
+                final AARBlock block = new AARBlock(i);
+                blocks.add(block);
 
-            offset += length;
+                workerThreads.submit(() -> {
+                    block.data = new ZIPCompressor().decompress(buffer.array());
+                    block.ready.countDown();
+                    updateProgress(++progress, NUM_BLOCKS);
+                });
+            }
         }
 
-        try (FileOutputStream fos = new FileOutputStream(file.getAbsolutePath().substring(0, file.getAbsolutePath().length() - 4))) {
+        // write the decompressed data, removing ".aar"
+        try (OutputStream os = Files.newOutputStream(
+                Paths.get(file.toAbsolutePath().toString().replace(".aar", "")))) {
             for (AARBlock block : blocks) {
                 block.ready.await();
-                fos.write(block.data);
+                os.write(block.data);
             }
         }
     }
