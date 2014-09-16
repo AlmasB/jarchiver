@@ -20,11 +20,10 @@
  */
 package com.almasb.jarchiver.task;
 
+import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javafx.concurrent.Task;
 
 /**
  * Parent AARTask which holds info about the AAR format
@@ -36,7 +35,7 @@ import javafx.concurrent.Task;
  * @version 1.0
  *
  */
-/*package-private*/ abstract class AARTask extends Task<Void> {
+/*package-private*/ abstract class AARTask extends JArchiverTask {
 
     /**
      * The AAR file consists of this many blocks
@@ -47,6 +46,10 @@ import javafx.concurrent.Task;
      * Shared worker threads
      */
     protected static ExecutorService workerThreads = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+    public AARTask(File[] files) {
+        super(files);
+    }
 
     /**
      * Represents one block of compressed data

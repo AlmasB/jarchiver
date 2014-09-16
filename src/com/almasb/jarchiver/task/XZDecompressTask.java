@@ -24,44 +24,36 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
-import javafx.concurrent.Task;
-
 import org.tukaani.xz.XZInputStream;
 
-public class XZDecompressTask extends Task<Void> {
+public final class XZDecompressTask extends JArchiverTask {
 
-    private final File file;
-
-    public XZDecompressTask(File file) {
-        this.file = file;
+    public XZDecompressTask(File[] files) {
+        super(files);
     }
 
     @Override
-    protected Void call() throws Exception {
-        if (!file.isFile() || !file.getName().endsWith(".xz")) {
-            updateMessage("Not .xz file");
-            return null;
-        }
-
-        long start = System.nanoTime();
-
+    protected void taskImpl(File file) throws Exception {
         try (FileInputStream fis = new FileInputStream(file);
                 FileOutputStream fos = new FileOutputStream(
                         file.getAbsolutePath().substring(0, file.getAbsolutePath().length()-3));
                 XZInputStream in = new XZInputStream(fis)) {
 
-            byte[] buf = new byte[8192];
-            int size;
-            while ((size = in.read(buf)) != -1)
-                fos.write(buf, 0, size);
-        }
-        catch (Exception e) {
-            updateMessage("Decompression failed");
-        }
+            final int fileSize = (int) file.length();
+            byte[] buffer = new byte[8192];
+            int len;
 
-        updateMessage(String.format("Compression took: %.3f s", (System.nanoTime() - start) / 1000000000.0));
-        System.gc();
-
-        return null;
+            while ((len = in.read(buffer)) != -1) {
+                fos.write(buffer, 0, len);
+                // the following isn't entirely correct
+                // fileSize is of a compressed file
+                // whereas len is number of bytes to write for uncompressed
+                // nevertheless this is at least some way of telling the user
+                // that we are doing something, it's just the bar will reach 100%
+                // faster than it should
+                progress += len;
+                updateProgress(progress, fileSize);
+            }
+        }
     }
 }

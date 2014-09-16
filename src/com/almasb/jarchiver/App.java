@@ -26,9 +26,11 @@ import static com.almasb.jarchiver.Config.APP_VERSION;
 import static com.almasb.jarchiver.Config.APP_W;
 
 import java.io.File;
+import java.util.ArrayList;
 
 import javafx.animation.FadeTransition;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.scene.Parent;
@@ -57,6 +59,7 @@ import javafx.util.Duration;
 
 import org.controlsfx.dialog.Dialogs;
 
+import com.almasb.common.util.Out;
 import com.almasb.jarchiver.task.AARCompressTask;
 import com.almasb.jarchiver.task.AARDecompressTask;
 import com.almasb.jarchiver.task.XZCompressTask;
@@ -79,13 +82,8 @@ public final class App extends FXWindow {
 
     /**
      * Files to be compressed / decompressed
-     * initial array of size 1 allows to avoid NPE and IOB
-     *
-     * Do check the first element however
-     *
-     * TODO: replace with Optional
      */
-    private File[] files = new File[1];
+    private ArrayList<File> files = new ArrayList<File>();
 
     private SimpleIntegerProperty xzPreset = new SimpleIntegerProperty(6);
 
@@ -122,8 +120,10 @@ public final class App extends FXWindow {
         btnAbout.setOnAction(event -> {
             Dialogs.create()
             .title("About")
-            .message(APP_TITLE + " v" + APP_VERSION)
-            .showInformation();
+            .message(APP_TITLE + " v" + APP_VERSION + "\n"
+                    + "XZ Java Lib (http://tukaani.org/xz/java.html) is used under the 'Public Domain' License\n"
+                    + "ControlsFX (http://fxexperience.com/controlsfx/) is used under the 'BSD 3-Clause' License")
+                    .showInformation();
         });
 
         Button btnHelp = new Button("Help");
@@ -270,7 +270,8 @@ public final class App extends FXWindow {
             boolean success = false;
             if (db.hasFiles()) {
                 success = true;
-                files = db.getFiles().toArray(new File[0]);
+                files.clear();
+                files.addAll(db.getFiles());
                 compressionService.restart();
             }
             event.setDropCompleted(success);
@@ -358,27 +359,47 @@ public final class App extends FXWindow {
                 case DC:
                     return findDCTask();
                 case XZ_C:
-                    return new XZCompressTask(files[0], xzPreset.get());
+                    return new XZCompressTask(files.stream().filter(file -> file.isFile()).toArray(File[]::new), xzPreset.get());
                 case AAR_C:
-                    return new AARCompressTask(files[0]);
+                    return new AARCompressTask(files.stream().filter(file -> file.isFile()).toArray(File[]::new));
                 case ZIP_C:
                 default:
-                    return new ZipCompressTask(files);
+                    return new ZipCompressTask(files.toArray(new File[0]));
             }
         }
 
-        // TODO: either check extensions for ALL files here or do something about it
         private Task<Void> findDCTask() {
-            File file = files[0];
-            if (file == null || !file.isFile())
-                return new DummyTask();
+            if (files.size() > 0) {
+                SimpleStringProperty ext = new SimpleStringProperty();
 
-            if (file.getName().endsWith(".jar"))
-                return new ZipDecompressTask(files);
-            if (file.getName().endsWith(".xz"))
-                return new XZDecompressTask(file);
-            if (file.getName().endsWith(".aar"))
-                return new AARDecompressTask(file);
+                String firstName = files.get(0).getName();
+                if (firstName.endsWith(".jar")) {
+                    ext.set(".jar");
+                }
+                else if (firstName.endsWith(".xz")) {
+                    ext.set(".xz");
+                }
+                else if (firstName.endsWith(".aar")) {
+                    ext.set(".aar");
+                }
+                else {
+                    ext.set("");
+                }
+
+                if (!ext.get().isEmpty()) {
+                    File[] filtered = files.stream().filter(file -> file.isFile() && file.getName().endsWith(ext.get())).toArray(File[]::new);
+                    switch (ext.get()) {
+                        case ".jar":
+                            return new ZipDecompressTask(filtered);
+                        case ".xz":
+                            return new XZDecompressTask(filtered);
+                        case ".aar":
+                            return new AARDecompressTask(filtered);
+                        default:
+                            break;
+                    }
+                }
+            }
 
             return new DummyTask();
         }

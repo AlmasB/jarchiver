@@ -31,22 +31,13 @@ import com.almasb.common.util.ZIPCompressor;
 
 public final class AARDecompressTask extends AARTask {
 
-    private final File file;
-    private int offset = 0;
-    private int progress = 0;
-
-    public AARDecompressTask(File file) {
-        this.file = file;
+    public AARDecompressTask(File[] files) {
+        super(files);
     }
 
     @Override
-    protected Void call() throws Exception {
-        if (!file.isFile() || !file.getName().endsWith(".aar")) {
-            updateMessage("Not .aar file");
-            return null;
-        }
-
-        long start = System.nanoTime();
+    protected void taskImpl(File file) throws Exception {
+        int offset = 0;
 
         byte[] data = Files.readAllBytes(file.toPath());
 
@@ -69,18 +60,11 @@ public final class AARDecompressTask extends AARTask {
             offset += length;
         }
 
-        FileOutputStream fos = new FileOutputStream(file.getAbsolutePath().substring(0, file.getAbsolutePath().length() - 4));
-
-        for (AARBlock block : blocks) {
-            block.ready.await();
-            fos.write(block.data);
+        try (FileOutputStream fos = new FileOutputStream(file.getAbsolutePath().substring(0, file.getAbsolutePath().length() - 4))) {
+            for (AARBlock block : blocks) {
+                block.ready.await();
+                fos.write(block.data);
+            }
         }
-
-        fos.close();
-
-        updateMessage(String.format("Decompression took: %.3f s", (System.nanoTime() - start) / 1000000000.0));
-        System.gc();
-
-        return null;
     }
 }
