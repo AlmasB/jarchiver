@@ -47,19 +47,14 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import org.controlsfx.dialog.Dialogs;
 
-import com.almasb.common.util.Out;
 import com.almasb.jarchiver.task.AARCompressTask;
 import com.almasb.jarchiver.task.AARDecompressTask;
 import com.almasb.jarchiver.task.XZCompressTask;
@@ -311,41 +306,30 @@ public final class App extends FXWindow {
         primaryStage.setResizable(false);
         primaryStage.show();
 
-        Popup pop = new Popup();
+        // set up popup help messages
+        Popup popup = new Popup();
+        popup.setTranslateX(APP_W / 2 - popup.prefWidth(-1) / 2);
+        popup.setTranslateY(APP_H / 2 - popup.prefHeight(-1) / 2);
+        popup.setMessage("Drag and drop files/folders");
+        popup.setOpacity(0);
+        root.getChildren().add(popup);
 
-        pop.setX(primaryStage.getX() + APP_W / 2 - 75);
-        pop.setY(primaryStage.getY() + APP_H / 2 - 50);
-
-        Rectangle r = new Rectangle(150, 50);
-        r.setFill(Color.AQUA);
-        r.setStroke(Color.BLUEVIOLET);
-        r.setArcHeight(30);
-        r.setArcWidth(30);
-
-        StackPane stack = new StackPane();
-        Text msg = new Text("Drag and drop files/folders");
-        stack.getChildren().addAll(r, msg);
-        stack.setOpacity(0);
-
-        pop.getContent().addAll(stack);
-        pop.show(primaryStage);
-
-        FadeTransition helpFT = new FadeTransition(Duration.seconds(1.5), stack);
+        FadeTransition helpFT = new FadeTransition(Duration.seconds(1.5), popup);
         helpFT.setToValue(1);
         helpFT.setAutoReverse(true);
         helpFT.setCycleCount(2);
         helpFT.setOnFinished(event -> {
-            pop.hide();
+            popup.setVisible(false);
         });
 
-        FadeTransition ft = new FadeTransition(Duration.seconds(1.5), stack);
+        FadeTransition ft = new FadeTransition(Duration.seconds(1.5), popup);
         ft.setToValue(1);
         ft.setAutoReverse(true);
         ft.setCycleCount(2);
         ft.setOnFinished(event -> {
-            pop.setX(primaryStage.getX() + 90);
-            pop.setY(primaryStage.getY() + 20);
-            msg.setText("Click help for more info");
+            popup.setTranslateX(70);
+            popup.setTranslateY(5);
+            popup.setMessage("Click help for more info");
             helpFT.play();
         });
         ft.play();
