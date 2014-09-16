@@ -25,8 +25,10 @@ import static com.almasb.jarchiver.Config.APP_TITLE;
 import static com.almasb.jarchiver.Config.APP_VERSION;
 import static com.almasb.jarchiver.Config.APP_W;
 
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 import javafx.animation.FadeTransition;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -78,7 +80,7 @@ public final class App extends FXWindow {
     /**
      * Files to be compressed / decompressed
      */
-    private ArrayList<File> files = new ArrayList<File>();
+    private ArrayList<Path> files = new ArrayList<Path>();
 
     private SimpleIntegerProperty xzPreset = new SimpleIntegerProperty(6);
 
@@ -266,7 +268,7 @@ public final class App extends FXWindow {
             if (db.hasFiles()) {
                 success = true;
                 files.clear();
-                files.addAll(db.getFiles());
+                files.addAll(db.getFiles().stream().map(file -> file.toPath()).collect(Collectors.toList()));
                 compressionService.restart();
             }
             event.setDropCompleted(success);
@@ -343,12 +345,12 @@ public final class App extends FXWindow {
                 case DC:
                     return findDCTask();
                 case XZ_C:
-                    return new XZCompressTask(files.stream().filter(file -> file.isFile()).toArray(File[]::new), xzPreset.get());
+                    return new XZCompressTask(files.stream().filter(file -> Files.isRegularFile(file)).toArray(Path[]::new), xzPreset.get());
                 case AAR_C:
-                    return new AARCompressTask(files.stream().filter(file -> file.isFile()).toArray(File[]::new));
+                    return new AARCompressTask(files.stream().filter(file -> Files.isRegularFile(file)).toArray(Path[]::new));
                 case ZIP_C:
                 default:
-                    return new ZipCompressTask(files.toArray(new File[0]));
+                    return new ZipCompressTask(files.toArray(new Path[0]));
             }
         }
 
@@ -356,7 +358,7 @@ public final class App extends FXWindow {
             if (files.size() > 0) {
                 SimpleStringProperty ext = new SimpleStringProperty();
 
-                String firstName = files.get(0).getName();
+                String firstName = files.get(0).getFileName().toString();
                 if (firstName.endsWith(".jar")) {
                     ext.set(".jar");
                 }
@@ -371,7 +373,7 @@ public final class App extends FXWindow {
                 }
 
                 if (!ext.get().isEmpty()) {
-                    File[] filtered = files.stream().filter(file -> file.isFile() && file.getName().endsWith(ext.get())).toArray(File[]::new);
+                    Path[] filtered = files.stream().filter(file -> Files.isRegularFile(file) && file.getFileName().toString().endsWith(ext.get())).toArray(Path[]::new);
                     switch (ext.get()) {
                         case ".jar":
                             return new ZipDecompressTask(filtered);

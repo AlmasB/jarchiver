@@ -20,7 +20,7 @@
  */
 package com.almasb.jarchiver.task;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -47,7 +47,7 @@ import java.util.concurrent.Executors;
      */
     protected static ExecutorService workerThreads = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-    public AARTask(File[] files) {
+    public AARTask(Path[] files) {
         super(files);
     }
 

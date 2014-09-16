@@ -20,7 +20,6 @@
  */
 package com.almasb.jarchiver.task;
 
-import java.io.File;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -33,13 +32,12 @@ import com.almasb.common.util.ZIPCompressor;
 
 public final class AARDecompressTask extends AARTask {
 
-    public AARDecompressTask(File[] files) {
+    public AARDecompressTask(Path[] files) {
         super(files);
     }
 
     @Override
-    protected void taskImpl(File legacyFile) throws Exception {
-        Path file = legacyFile.toPath();
+    protected void taskImpl(Path file) throws Exception {
         ArrayList<AARBlock> blocks = new ArrayList<AARBlock>();
 
         try (FileChannel fc = FileChannel.open(file)) {

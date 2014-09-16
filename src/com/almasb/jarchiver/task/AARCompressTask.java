@@ -20,7 +20,6 @@
  */
 package com.almasb.jarchiver.task;
 
-import java.io.File;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -33,18 +32,17 @@ import com.almasb.common.util.ZIPCompressor;
 
 public final class AARCompressTask extends AARTask {
 
-    public AARCompressTask(File[] files) {
+    public AARCompressTask(Path[] files) {
         super(files);
     }
 
     @Override
-    protected void taskImpl(File legacyFile) throws Exception {
-        if (!legacyFile.isFile()) {
-            updateMessage(legacyFile.getAbsolutePath() + " is not a valid file");
+    protected void taskImpl(Path file) throws Exception {
+        if (!Files.isRegularFile(file)) {
+            updateMessage(file.toAbsolutePath() + " is not a valid file");
             return;
         }
 
-        Path file = legacyFile.toPath();
         final int fileSize = (int) Files.size(file);
 
         if (fileSize < NUM_BLOCKS) {
@@ -59,14 +57,14 @@ public final class AARCompressTask extends AARTask {
 
         try (FileChannel fc = FileChannel.open(file)) {
             for (int i = 0; i < NUM_BLOCKS; i++) {
-                final AARBlock block = new AARBlock(i);
-                blocks.add(block);
-
                 final ByteBuffer buffer = ByteBuffer.allocate(i == NUM_BLOCKS - 1 ? bytesLeft : bytesPerBlock);
                 int len;
                 do {
                     len = fc.read(buffer);
                 } while (len != -1 && buffer.hasRemaining());
+
+                final AARBlock block = new AARBlock(i);
+                blocks.add(block);
 
                 workerThreads.submit(() -> {
                     block.data = new ZIPCompressor().compress(buffer.array());
