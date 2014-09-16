@@ -21,11 +21,13 @@
 package com.almasb.jarchiver.task;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import com.almasb.common.util.ZIPCompressor;
 
@@ -36,37 +38,46 @@ public final class AARCompressTask extends AARTask {
     }
 
     @Override
-    protected void taskImpl(File file) throws Exception {
-        if (!file.isFile()) {
-            updateMessage(file.getAbsolutePath() + " is not a valid file");
+    protected void taskImpl(File legacyFile) throws Exception {
+        if (!legacyFile.isFile()) {
+            updateMessage(legacyFile.getAbsolutePath() + " is not a valid file");
             return;
         }
 
-        byte[] data = Files.readAllBytes(file.toPath());
+        Path file = legacyFile.toPath();
+        final int fileSize = (int) Files.size(file);
 
-        if (data.length < NUM_BLOCKS) {
+        if (fileSize < NUM_BLOCKS) {
             updateMessage("File too small (<" + NUM_BLOCKS + "B)");
             return;
         }
 
-        int bytesPerBlock = data.length / (NUM_BLOCKS - 1);
-        int bytesLeft = data.length % (NUM_BLOCKS - 1);
+        final int bytesPerBlock = fileSize / (NUM_BLOCKS - 1);
+        final int bytesLeft = fileSize % (NUM_BLOCKS - 1);
 
         ArrayList<AARBlock> blocks = new ArrayList<AARBlock>();
 
-        for (int i = 0; i < NUM_BLOCKS; i++) {
-            final AARBlock block = new AARBlock(i);
-            blocks.add(block);
-            workerThreads.submit(() -> {
-                block.data = new ZIPCompressor().compress(Arrays.copyOfRange(data, block.number*bytesPerBlock,
-                        block.number*bytesPerBlock + (block.number == NUM_BLOCKS - 1 ? bytesLeft : bytesPerBlock)));
+        try (FileChannel fc = FileChannel.open(file)) {
+            for (int i = 0; i < NUM_BLOCKS; i++) {
+                final AARBlock block = new AARBlock(i);
+                blocks.add(block);
 
-                block.ready.countDown();
-                updateProgress(++progress, NUM_BLOCKS);
-            });
+                final ByteBuffer buffer = ByteBuffer.allocate(i == NUM_BLOCKS - 1 ? bytesLeft : bytesPerBlock);
+                int len;
+                do {
+                    len = fc.read(buffer);
+                } while (len != -1 && buffer.hasRemaining());
+
+                workerThreads.submit(() -> {
+                    block.data = new ZIPCompressor().compress(buffer.array());
+                    block.ready.countDown();
+                    updateProgress(++progress, NUM_BLOCKS);
+                });
+            }
         }
 
-        try (FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".aar")) {
+        try (OutputStream fos = Files.newOutputStream(
+                Paths.get(file.toAbsolutePath().toString().concat(".aar")))) {
             for (AARBlock block : blocks) {
                 block.ready.await();
 
