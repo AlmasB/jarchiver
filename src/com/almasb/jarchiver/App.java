@@ -316,25 +316,34 @@ public final class App extends FXWindow {
         popup.setOpacity(0);
         root.getChildren().add(popup);
 
-        FadeTransition helpFT = new FadeTransition(Duration.seconds(1.5), popup);
-        helpFT.setToValue(1);
-        helpFT.setAutoReverse(true);
-        helpFT.setCycleCount(2);
-        helpFT.setOnFinished(event -> {
-            popup.setVisible(false);
+        SimpleIntegerProperty messageState = new SimpleIntegerProperty(0);
+        messageState.addListener((obs, old, newValue) -> {
+            switch (newValue.intValue()) {
+                case 1:
+                    popup.setTranslateX(340);
+                    popup.setTranslateY(10);
+                    popup.setMessage("Deselect for decompression");
+                    break;
+                case 2:
+                    popup.setTranslateX(70);
+                    popup.setTranslateY(5);
+                    popup.setMessage("Click help for more info");
+                    break;
+                default:
+                    popup.setVisible(false);
+                    break;
+            }
         });
 
-        FadeTransition ft = new FadeTransition(Duration.seconds(1.5), popup);
-        ft.setToValue(1);
-        ft.setAutoReverse(true);
-        ft.setCycleCount(2);
-        ft.setOnFinished(event -> {
-            popup.setTranslateX(70);
-            popup.setTranslateY(5);
-            popup.setMessage("Click help for more info");
-            helpFT.play();
+        final FadeTransition popupAnimation = new FadeTransition(Duration.seconds(2), popup);
+        popupAnimation.setToValue(1);
+        popupAnimation.setAutoReverse(true);
+        popupAnimation.setCycleCount(2);
+        popupAnimation.setOnFinished(event -> {
+            messageState.set(messageState.get() + 1);
+            popupAnimation.play();
         });
-        ft.play();
+        popupAnimation.play();
     }
 
     private class CompressionService extends Service<Void> {
