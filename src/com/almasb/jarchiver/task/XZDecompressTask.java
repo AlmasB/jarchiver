@@ -20,31 +20,32 @@
  */
 package com.almasb.jarchiver.task;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.tukaani.xz.XZInputStream;
 
 public final class XZDecompressTask extends JArchiverTask {
 
-    public XZDecompressTask(File[] files) {
+    public XZDecompressTask(Path[] files) {
         super(files);
     }
 
     @Override
-    protected void taskImpl(File file) throws Exception {
-        try (FileInputStream fis = new FileInputStream(file);
-                FileOutputStream fos = new FileOutputStream(
-                        file.getAbsolutePath().substring(0, file.getAbsolutePath().length()-3));
+    protected void taskImpl(Path file) throws Exception {
+        try (InputStream fis = Files.newInputStream(file);
+                OutputStream os = Files.newOutputStream(Paths.get(file.toAbsolutePath().toString().replace(".xz", "")));
                 XZInputStream in = new XZInputStream(fis)) {
 
-            final int fileSize = (int) file.length();
+            final int fileSize = (int) Files.size(file);
             byte[] buffer = new byte[8192];
             int len;
 
             while ((len = in.read(buffer)) != -1) {
-                fos.write(buffer, 0, len);
+                os.write(buffer, 0, len);
                 // the following isn't entirely correct
                 // fileSize is of a compressed file
                 // whereas len is number of bytes to write for uncompressed

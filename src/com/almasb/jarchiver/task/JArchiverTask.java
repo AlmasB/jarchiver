@@ -1,19 +1,17 @@
 package com.almasb.jarchiver.task;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import com.almasb.common.util.Out;
 
 import javafx.concurrent.Task;
 
-// TODO: use java.nio.file.Files in all subclasses
-
 /*package-private*/ abstract class JArchiverTask extends Task<Void> {
 
-    private final File[] files;
+    private final Path[] files;
     protected int progress = 0;
 
-    public JArchiverTask(File[] files) {
+    public JArchiverTask(Path[] files) {
         this.files = files;
     }
 
@@ -23,18 +21,18 @@ import javafx.concurrent.Task;
     @Override
     protected Void call() throws Exception {
         long start = System.nanoTime();
-        for (File file : files) {
+        for (Path file : files) {
             try {
                 updateProgress(-1, -1); // set indeterminate
                 progress = 0;
                 updateProgress(progress, 100);
-                updateMessage("Executing task on: " + file.getAbsolutePath());
+                updateMessage("Executing task on: " + file.toAbsolutePath());
                 taskImpl(file);
 
                 System.gc();
             }
             catch (Exception e) {
-                updateMessage("Failed to complete task on " + file.getAbsolutePath());
+                updateMessage("Failed to complete task on " + file.toAbsolutePath());
                 Out.e(e);
                 return null;
             }
@@ -44,5 +42,11 @@ import javafx.concurrent.Task;
         return null;
     }
 
-    protected abstract void taskImpl(File file) throws Exception;
+    /**
+     * Actual implementation of the compression/decompression task
+     *
+     * @param file
+     * @throws Exception
+     */
+    protected abstract void taskImpl(Path file) throws Exception;
 }

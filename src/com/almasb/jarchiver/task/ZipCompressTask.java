@@ -20,56 +20,57 @@
  */
 package com.almasb.jarchiver.task;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
-import com.almasb.java.io.ResourceManager;
-
 public final class ZipCompressTask extends JArchiverTask {
 
-    public ZipCompressTask(File[] files) {
+    public ZipCompressTask(Path[] files) {
         super(files);
     }
 
     @Override
-    protected void taskImpl(File file) throws Exception {
-        if (file.isDirectory()) {
+    protected void taskImpl(Path file) throws Exception {
+        if (Files.isDirectory(file)) {
+            ArrayList<Path> files = new ArrayList<Path>();
 
-            ArrayList<File> files = new ArrayList<File>();
-            loadFileNames(file, files);
+            Files.walk(file).forEach(innerFile -> {
+                if (Files.isRegularFile(innerFile))
+                    files.add(innerFile);
+            });
 
-            try (FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".jar");
+            try (OutputStream fos = Files.newOutputStream(Paths.get(file.toAbsolutePath().toString().concat(".jar")));
                     JarOutputStream jos = new JarOutputStream(fos)) {
 
-                for (File aFile : files) {
-                    String name = aFile.getAbsolutePath();
-                    name = name.substring(name.indexOf(file.getName()));
-
+                for (Path aFile : files) {
+                    String name = file.getFileName().resolve(file.relativize(aFile)).toString();
                     updateMessage("Compressing: " + name);
 
                     JarEntry entry = new JarEntry(name);
                     jos.putNextEntry(entry);
                     // assuming files aren't too big otherwise
                     // use the technique below 'read-write'
-                    jos.write(ResourceManager.loadResourceAsByteArray(aFile.getAbsolutePath()));
+                    jos.write(Files.readAllBytes(aFile));
                     jos.closeEntry();
 
                     updateProgress(++progress, files.size());
                 }
             }
         }
-        else if (file.isFile()) {
-            try (FileInputStream fis = new FileInputStream(file);
-                    FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".jar");
+        else if (Files.isRegularFile(file)) {
+            try (InputStream fis = Files.newInputStream(file);
+                    OutputStream fos = Files.newOutputStream(Paths.get(file.toAbsolutePath().toString().concat(".jar")));
                     JarOutputStream jos = new JarOutputStream(fos)) {
 
-                final int fileSize = (int) file.length();
+                final int fileSize = (int) Files.size(file);
 
-                JarEntry entry = new JarEntry(file.getName());
+                JarEntry entry = new JarEntry(file.getFileName().toString());
                 jos.putNextEntry(entry);
 
                 byte[] buffer = new byte[8192];
@@ -81,28 +82,6 @@ public final class ZipCompressTask extends JArchiverTask {
                 }
 
                 jos.closeEntry();
-            }
-        }
-    }
-
-    /**
-     * Recursively load file names from the folder
-     *
-     * @param folder
-     * @param files
-     */
-    private void loadFileNames(File folder, ArrayList<File> files) {
-        File[] allFiles = folder.listFiles();
-        if (allFiles == null) {
-            return;
-        }
-
-        for (File file : allFiles) {
-            if (file.isDirectory()) {
-                loadFileNames(file, files);
-            }
-            else {
-                files.add(file);
             }
         }
     }

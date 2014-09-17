@@ -20,9 +20,11 @@
  */
 package com.almasb.jarchiver.task;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.UnsupportedOptionsException;
@@ -32,7 +34,7 @@ public final class XZCompressTask extends JArchiverTask {
 
     private final LZMA2Options options = new LZMA2Options();
 
-    public XZCompressTask(File[] files, int preset) {
+    public XZCompressTask(Path[] files, int preset) {
         super(files);
         try {
             options.setPreset(preset);
@@ -43,19 +45,20 @@ public final class XZCompressTask extends JArchiverTask {
     }
 
     @Override
-    protected void taskImpl(File file) throws Exception {
-        if (!file.isFile()) {
-            updateMessage(file.getAbsolutePath() + " is not a valid file");
+    protected void taskImpl(Path file) throws Exception {
+        if (!Files.isRegularFile(file)) {
+            updateMessage(file.toAbsolutePath() + " is not a valid file");
             return;
         }
 
-        try (FileInputStream fis = new FileInputStream(file);
-                FileOutputStream fos = new FileOutputStream(file.getAbsolutePath() + ".xz");
+        try (InputStream fis = Files.newInputStream(file);
+                OutputStream fos = Files.newOutputStream(Paths.get(file.toAbsolutePath().toString().concat(".xz")));
                 XZOutputStream out = new XZOutputStream(fos, options)) {
+
+            int fileSize = (int) Files.size(file);
 
             byte[] buffer = new byte[8192];
             int len = 0;
-            int fileSize = (int) file.length();
 
             while ((len = fis.read(buffer)) != -1) {
                 out.write(buffer, 0, len);

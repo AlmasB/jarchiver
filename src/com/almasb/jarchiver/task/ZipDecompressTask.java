@@ -20,38 +20,37 @@
  */
 package com.almasb.jarchiver.task;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
+import com.almasb.java.io.ResourceManager;
+
 public final class ZipDecompressTask extends JArchiverTask {
 
-    public ZipDecompressTask(File[] files) {
+    public ZipDecompressTask(Path[] files) {
         super(files);
     }
 
     @Override
-    protected void taskImpl(File file) throws Exception {
-        try (FileInputStream fis = new FileInputStream(file);
+    protected void taskImpl(Path file) throws Exception {
+        try (InputStream fis = Files.newInputStream(file);
                 JarInputStream jis = new JarInputStream(fis)) {
 
-            final int fileSize = (int) file.length();
+            final int fileSize = (int) Files.size(file);
 
             JarEntry entry = null;
             while ((entry = jis.getNextJarEntry()) != null) {
                 String fileName = entry.getName();
                 updateMessage("Decompressing: " + fileName);
 
-                if (fileName.contains(File.separator)) {
-                    File parentDirs = new File(file.getParent() + File.separator + fileName.substring(0, fileName.lastIndexOf(File.separator)) + File.separator);
-                    if (!parentDirs.exists()) {
-                        parentDirs.mkdirs();
-                    }
-                }
+                Path aFile = file.getParent().resolve(fileName);
+                ResourceManager.createDirsTo(aFile);
 
-                try (FileOutputStream fos = new FileOutputStream(file.getParent() + File.separator + fileName)) {
+                try (OutputStream fos = Files.newOutputStream(aFile)) {
                     byte[] buf = new byte[8192];
                     int len;
                     while ((len = jis.read(buf)) > 0) {

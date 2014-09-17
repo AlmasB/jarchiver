@@ -25,8 +25,10 @@ import static com.almasb.jarchiver.Config.APP_TITLE;
 import static com.almasb.jarchiver.Config.APP_VERSION;
 import static com.almasb.jarchiver.Config.APP_W;
 
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 import javafx.animation.FadeTransition;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -47,19 +49,14 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import org.controlsfx.dialog.Dialogs;
 
-import com.almasb.common.util.Out;
 import com.almasb.jarchiver.task.AARCompressTask;
 import com.almasb.jarchiver.task.AARDecompressTask;
 import com.almasb.jarchiver.task.XZCompressTask;
@@ -83,7 +80,7 @@ public final class App extends FXWindow {
     /**
      * Files to be compressed / decompressed
      */
-    private ArrayList<File> files = new ArrayList<File>();
+    private ArrayList<Path> files = new ArrayList<Path>();
 
     private SimpleIntegerProperty xzPreset = new SimpleIntegerProperty(6);
 
@@ -271,7 +268,7 @@ public final class App extends FXWindow {
             if (db.hasFiles()) {
                 success = true;
                 files.clear();
-                files.addAll(db.getFiles());
+                files.addAll(db.getFiles().stream().map(file -> file.toPath()).collect(Collectors.toList()));
                 compressionService.restart();
             }
             event.setDropCompleted(success);
@@ -311,44 +308,42 @@ public final class App extends FXWindow {
         primaryStage.setResizable(false);
         primaryStage.show();
 
-        Popup pop = new Popup();
+        // set up popup help messages
+        Popup popup = new Popup();
+        popup.setTranslateX(APP_W / 2 - popup.prefWidth(-1) / 2);
+        popup.setTranslateY(APP_H / 2 - popup.prefHeight(-1) / 2);
+        popup.setMessage("Drag and drop files/folders");
+        popup.setOpacity(0);
+        root.getChildren().add(popup);
 
-        pop.setX(primaryStage.getX() + APP_W / 2 - 75);
-        pop.setY(primaryStage.getY() + APP_H / 2 - 50);
-
-        Rectangle r = new Rectangle(150, 50);
-        r.setFill(Color.AQUA);
-        r.setStroke(Color.BLUEVIOLET);
-        r.setArcHeight(30);
-        r.setArcWidth(30);
-
-        StackPane stack = new StackPane();
-        Text msg = new Text("Drag and drop files/folders");
-        stack.getChildren().addAll(r, msg);
-        stack.setOpacity(0);
-
-        pop.getContent().addAll(stack);
-        pop.show(primaryStage);
-
-        FadeTransition helpFT = new FadeTransition(Duration.seconds(1.5), stack);
-        helpFT.setToValue(1);
-        helpFT.setAutoReverse(true);
-        helpFT.setCycleCount(2);
-        helpFT.setOnFinished(event -> {
-            pop.hide();
+        SimpleIntegerProperty messageState = new SimpleIntegerProperty(0);
+        messageState.addListener((obs, old, newValue) -> {
+            switch (newValue.intValue()) {
+                case 1:
+                    popup.setTranslateX(340);
+                    popup.setTranslateY(10);
+                    popup.setMessage("Deselect for decompression");
+                    break;
+                case 2:
+                    popup.setTranslateX(70);
+                    popup.setTranslateY(5);
+                    popup.setMessage("Click help for more info");
+                    break;
+                default:
+                    popup.setVisible(false);
+                    break;
+            }
         });
 
-        FadeTransition ft = new FadeTransition(Duration.seconds(1.5), stack);
-        ft.setToValue(1);
-        ft.setAutoReverse(true);
-        ft.setCycleCount(2);
-        ft.setOnFinished(event -> {
-            pop.setX(primaryStage.getX() + 90);
-            pop.setY(primaryStage.getY() + 20);
-            msg.setText("Click help for more info");
-            helpFT.play();
+        final FadeTransition popupAnimation = new FadeTransition(Duration.seconds(2), popup);
+        popupAnimation.setToValue(1);
+        popupAnimation.setAutoReverse(true);
+        popupAnimation.setCycleCount(2);
+        popupAnimation.setOnFinished(event -> {
+            messageState.set(messageState.get() + 1);
+            popupAnimation.play();
         });
-        ft.play();
+        popupAnimation.play();
     }
 
     private class CompressionService extends Service<Void> {
@@ -359,12 +354,12 @@ public final class App extends FXWindow {
                 case DC:
                     return findDCTask();
                 case XZ_C:
-                    return new XZCompressTask(files.stream().filter(file -> file.isFile()).toArray(File[]::new), xzPreset.get());
+                    return new XZCompressTask(files.stream().filter(file -> Files.isRegularFile(file)).toArray(Path[]::new), xzPreset.get());
                 case AAR_C:
-                    return new AARCompressTask(files.stream().filter(file -> file.isFile()).toArray(File[]::new));
+                    return new AARCompressTask(files.stream().filter(file -> Files.isRegularFile(file)).toArray(Path[]::new));
                 case ZIP_C:
                 default:
-                    return new ZipCompressTask(files.toArray(new File[0]));
+                    return new ZipCompressTask(files.toArray(new Path[0]));
             }
         }
 
@@ -372,7 +367,7 @@ public final class App extends FXWindow {
             if (files.size() > 0) {
                 SimpleStringProperty ext = new SimpleStringProperty();
 
-                String firstName = files.get(0).getName();
+                String firstName = files.get(0).getFileName().toString();
                 if (firstName.endsWith(".jar")) {
                     ext.set(".jar");
                 }
@@ -387,7 +382,7 @@ public final class App extends FXWindow {
                 }
 
                 if (!ext.get().isEmpty()) {
-                    File[] filtered = files.stream().filter(file -> file.isFile() && file.getName().endsWith(ext.get())).toArray(File[]::new);
+                    Path[] filtered = files.stream().filter(file -> Files.isRegularFile(file) && file.getFileName().toString().endsWith(ext.get())).toArray(Path[]::new);
                     switch (ext.get()) {
                         case ".jar":
                             return new ZipDecompressTask(filtered);
