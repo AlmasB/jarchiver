@@ -75,6 +75,10 @@ import com.almasb.java.ui.fx.MemoryUsageBar;
  */
 public final class App extends FXWindow {
 
+    /**
+     * The whole application logic is handled via
+     * this service
+     */
     private CompressionService compressionService = new CompressionService();
 
     /**
@@ -82,12 +86,17 @@ public final class App extends FXWindow {
      */
     private ArrayList<Path> files = new ArrayList<Path>();
 
-    private SimpleIntegerProperty xzPreset = new SimpleIntegerProperty(6);
-
+    /**
+     * C - compression
+     * DC - decompression
+     */
     private enum Mode {
         ZIP_C, XZ_C, AAR_C, DC
     }
 
+    /**
+     * Current mode that sets application logic
+     */
     private Mode mode = Mode.ZIP_C;
 
     @Override
@@ -190,17 +199,17 @@ public final class App extends FXWindow {
             }
         });
 
-        Text xzPresetText = new Text();
-        xzPresetText.setText(xzPreset.get() + " (" + "Medium" + ")");
+        Text xzPresetText = new Text(compressionService.xzPreset + " (" + "Medium" + ")");
 
-        Slider xzPresetSlider = new Slider(0, 9, 6);
+        // 0 and 9 correspond to min and max presets defined by internal logic (LZMA2Options)
+        Slider xzPresetSlider = new Slider(0, 9, compressionService.xzPreset);
         xzPresetSlider.setSnapToTicks(true);
         xzPresetSlider.setMajorTickUnit(1);
         xzPresetSlider.disableProperty().bind(toggleXZ.selectedProperty().not());
         xzPresetSlider.valueProperty().addListener((obs, old, newValue) -> {
             int preset = newValue.intValue();
 
-            xzPreset.set(preset);
+            compressionService.xzPreset = preset;
             String compression = "";
             if (preset >= 7) {
                 compression = "High";
@@ -265,7 +274,7 @@ public final class App extends FXWindow {
         list.setOnDragDropped(event -> {
             Dragboard db = event.getDragboard();
             boolean success = false;
-            if (db.hasFiles()) {
+            if (db.hasFiles() && !compressionService.isRunning()) {
                 success = true;
                 files.clear();
                 files.addAll(db.getFiles().stream().map(file -> file.toPath()).collect(Collectors.toList()));
@@ -347,6 +356,10 @@ public final class App extends FXWindow {
     }
 
     private class CompressionService extends Service<Void> {
+        /**
+         * Default value for XZ compression preset
+         */
+        private int xzPreset = 6;
 
         @Override
         protected Task<Void> createTask() {
@@ -354,7 +367,7 @@ public final class App extends FXWindow {
                 case DC:
                     return findDCTask();
                 case XZ_C:
-                    return new XZCompressTask(files.stream().filter(file -> Files.isRegularFile(file)).toArray(Path[]::new), xzPreset.get());
+                    return new XZCompressTask(files.stream().filter(file -> Files.isRegularFile(file)).toArray(Path[]::new), xzPreset);
                 case AAR_C:
                     return new AARCompressTask(files.stream().filter(file -> Files.isRegularFile(file)).toArray(Path[]::new));
                 case ZIP_C:
