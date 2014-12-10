@@ -37,6 +37,8 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ListView;
@@ -54,8 +56,6 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-
-import org.controlsfx.dialog.Dialogs;
 
 import com.almasb.jarchiver.task.AARCompressTask;
 import com.almasb.jarchiver.task.AARDecompressTask;
@@ -124,26 +124,20 @@ public final class App extends FXWindow {
 
         Button btnAbout = new Button("About");
         btnAbout.setOnAction(event -> {
-            Dialogs.create()
-            .title("About")
-            .message(APP_TITLE + " v" + APP_VERSION + "\n"
-                    + "XZ Java Lib (http://tukaani.org/xz/java.html) is used under the 'Public Domain' License\n"
-                    + "ControlsFX (http://fxexperience.com/controlsfx/) is used under the 'BSD 3-Clause' License")
-                    .showInformation();
+            Alert dialog = new Alert(AlertType.INFORMATION);
+            dialog.setTitle("About JArchiver");
+            dialog.setHeaderText(APP_TITLE + " v" + APP_VERSION);
+            dialog.setContentText("XZ Java (http://tukaani.org/xz/java.html)\n"
+                    + "ControlsFX (http://fxexperience.com/controlsfx/)");
+            dialog.show();
         });
 
         Button btnHelp = new Button("Help");
         btnHelp.setOnAction(event -> {
-            Dialogs.create()
-            .title("Help")
-            .message("Currently there are 3 compression modes: ZIP / XZ / AAR\n"
-                    + "ZIP produces a .jar file with ZIP compression\n"
-                    + "XZ produces a .xz file with LZMA2 compression\n"
-                    + "AAR produces a .arr file with custom DEFLATE compression\n"
-                    + "Note: XZ only works with a single file but provides greater compression ratio\n"
-                    + "Note: AAR only works with a single file but provides faster compression times\n"
-                    + "Do not use files over 2 GB")
-                    .showInformation();
+            Alert dialog = new Alert(AlertType.INFORMATION);
+            dialog.setTitle("Help");
+            dialog.setContentText("ZIP: (.jar) fast; XZ: (.xz) slow; AAR: (.aar) fast");
+            dialog.show();
         });
 
         toolbar.getItems().addAll(btnHelp, btnAbout);
