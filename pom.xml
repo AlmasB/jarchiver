@@ -14,6 +14,9 @@
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
+                    <sourceIncludes>
+                        <sourceInclude>**/*.png</sourceInclude>
+                    </sourceIncludes>
                 </configuration>
             </plugin>
 
@@ -26,7 +29,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.almasb.jarchiver.Main</mainClass>
+                            <mainClass>com.almasb.jarchiver.JArchiverMain</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
@@ -61,11 +64,22 @@
                 </executions>
                 <configuration>
                     <executable>java</executable>
-                    <mainClass>com.almasb.jarchiver.Main</mainClass>
+                    <mainClass>com.almasb.jarchiver.JArchiverMain</mainClass>
                 </configuration>
             </plugin>
 
         </plugins>
+
+		<resources>
+			<resource>
+				<directory>src/com/almasb/jarchiver</directory>
+				<excludes>
+					<exclude>**/*.java</exclude>
+				</excludes>
+                <targetPath>com/almasb/jarchiver</targetPath>
+                <filtering>false</filtering>
+			</resource>
+		</resources>
 
     </build>
 
