@@ -20,18 +20,17 @@
  */
 package com.almasb.jarchiver;
 
+import javafx.application.Application;
+
 /**
- * Application config and constants
+ * Main entry point
  *
  * @author Almas Baimagambetov (ab607@uni.brighton.ac.uk)
  * @version 1.0
  *
  */
-public final class Config {
-
-    public static final int APP_W = 500;
-    public static final int APP_H = 500;
-
-    public static final String APP_TITLE = "JArchiver by AlmasB";
-    public static final String APP_VERSION = "0.8.0";
+public final class JArchiverMain {
+    public static void main(String[] args) {
+        Application.launch(App.class, args);
+    }
 }
