@@ -14,3 +14,7 @@
 
 # maven #
 dependency-reduced-pom.xml
+
+# gradle #
+.gradle/
+build/
