@@ -10,8 +10,23 @@ buildscript {
 apply plugin: 'org.javafxports.jfxmobile'
 
 repositories {
-    jcenter()
+    mavenCentral()
+}
+
+dependencies {
+    compile 'org.apache.logging.log4j:log4j-api:2.3'
+    compile 'org.apache.logging.log4j:log4j-core:2.3'
+    testCompile 'junit:junit:4.12'
 }
 
 mainClassName = 'com.almasb.jarchiver.JArchiverApp'
 
+jar {
+    manifest { 
+        attributes "Main-Class": "$mainClassName"
+    }  
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}

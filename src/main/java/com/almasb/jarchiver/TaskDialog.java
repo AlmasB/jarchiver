@@ -22,7 +22,6 @@ public class TaskDialog {
         dialog.headerTextProperty().bind(task.messageProperty());
         dialog.getDialogPane().setContent(progress);
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CANCEL);
-
     }
 
     public void showAndWait() {

@@ -18,9 +18,8 @@ public class UnZipTask extends Task<Void> {
     protected Void call() throws Exception {
         try (ZipFile zipFile = new ZipFile(file.toFile())) {
             int files = zipFile.size();
-            CountDownLatch latch = new CountDownLatch(files);
 
-            zipFile.stream().parallel().forEach(entry -> {
+            zipFile.stream().forEach(entry -> {
                 try {
                     updateMessage("Unzipping " + entry.getName());
                     Path outEntry = file.getParent().resolve(entry.getName());
@@ -32,17 +31,13 @@ public class UnZipTask extends Task<Void> {
                         Files.createDirectories(outEntry.getParent());
                         Files.copy(zipFile.getInputStream(entry), outEntry);
                     }
-
-                    latch.countDown();
-                    updateProgress(files - latch.getCount(), files);
+                    //updateProgress(files - latch.getCount(), files);
                 }
                 catch (Exception e) {
                     // TODO: handle exception
                     e.printStackTrace();
                 }
             });
-
-            latch.await();
         }
 
         return null;
